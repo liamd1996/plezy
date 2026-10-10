@@ -43,27 +43,28 @@ jobs:
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile --no-example
 
-      # Optional stable signing key. Without these secrets the APK is signed
-      # with the runner's throwaway debug key, and each new build must be
-      # installed after uninstalling the previous one.
+      # Stable signing key, so a new build installs over the previous one and
+      # keeps its settings. The keystore lives in the ANDROID_KEYSTORE_BASE64
+      # repository secret; its password is not sensitive on its own. Without
+      # the secret the APK gets the runner's throwaway debug key, and each new
+      # build then has to be installed after uninstalling the previous one.
       - name: Configure Android signing
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           if [[ -z "$KEYSTORE_BASE64" ]]; then
-            echo "No signing secrets: using debug signing."
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set: using throwaway debug signing."
+            echo "SIGNING=debug" >> "$GITHUB_ENV"
             exit 0
           fi
           echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
           {
-            echo "storePassword=$STORE_PASSWORD"
-            echo "keyPassword=$KEY_PASSWORD"
-            echo "keyAlias=$KEY_ALIAS"
+            echo "storePassword=plezystreamer"
+            echo "keyPassword=plezystreamer"
+            echo "keyAlias=plezystreamer"
             echo "storeFile=upload-keystore.jks"
           } > android/key.properties
+          echo "SIGNING=fixed-key" >> "$GITHUB_ENV"
 
       - name: Build APKs
         run: >
@@ -97,5 +98,5 @@ jobs:
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
             --title "Plezy Streamer build ${{ github.run_number }}" \
-            --notes "Plezy with season tabs on the TV show page and the downloads UI hidden on Android TV. Unofficial personal build." \
+            --notes "Plezy with season tabs on the TV show page and the downloads UI hidden on Android TV. Unofficial personal build, installs next to the official app. Signing: $SIGNING." \
             --latest

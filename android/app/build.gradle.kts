@@ -245,7 +245,9 @@ android {
   }
 
   defaultConfig {
-    applicationId = "com.edde746.plezy"
+    // Fork: own application id so this build installs next to the official
+    // Plezy instead of replacing it. The Kotlin namespace is unchanged.
+    applicationId = "com.edde746.plezy.streamer"
     minSdk = 25 // Fire OS 6.x (API 25); :libmpv shares the same floor
     targetSdk = flutter.targetSdkVersion
     versionCode = flutter.versionCode
