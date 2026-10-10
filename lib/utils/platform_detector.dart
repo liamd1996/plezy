@@ -219,6 +219,14 @@ class PlatformDetector {
     return TvDetectionService.isAppleTVSync();
   }
 
+  /// True where the downloads UI (tab, buttons, menu entries, settings
+  /// section) is hidden. Apple TV has no user-accessible storage; this fork
+  /// also hides it on Android TV / Google TV, where offline downloads are not
+  /// wanted. Phones, tablets and desktop keep downloads.
+  static bool hideDownloads() {
+    return isAppleTV() || (Platform.isAndroid && isTV());
+  }
+
   /// True on Android Automotive OS head units.
   static bool isAutomotive() {
     return TvDetectionService.isAutomotiveSync();

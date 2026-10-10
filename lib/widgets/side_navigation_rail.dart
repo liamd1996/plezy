@@ -498,7 +498,7 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
   /// focus-expanded — displaces content instead and stays transparent on TV.
   bool get _isFloatingPanel => _interactionExpanded && !widget.alwaysExpanded;
 
-  bool get _showDownloads => !PlatformDetector.isAppleTV();
+  bool get _showDownloads => !PlatformDetector.hideDownloads();
 
   /// macOS has the system green button; mobile/TV have no OS fullscreen toggle.
   bool get _showFullscreenToggle => Platform.isWindows || Platform.isLinux;

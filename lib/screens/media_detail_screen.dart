@@ -129,6 +129,11 @@ const double _tvDetailTallPosterScale = 0.72;
 const double _tvDetailEpisodeThumbnailScale = 0.72;
 const double _tvDetailActionSize = 46;
 const double _tvDetailActionRailGap = 4;
+
+/// Fork: height of the season tab row shown above the TV detail rail. Tab
+/// chips are not TV-scaled, so this is a fixed logical height.
+const double _tvDetailSeasonTabsHeight = 44;
+const double _tvDetailSeasonTabsGap = 10;
 const String _tvDetailSeasonsErrorHubId = 'detail_seasons_error';
 const String _tvDetailSeasonHubIdPrefix = 'detail_season_';
 const String _tvDetailExtrasHubId = 'detail_extras';
@@ -2136,6 +2141,48 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       _syncSelectedSeasonEpisodes(seasonIndex, _seasons[seasonIndex].id);
     });
     unawaited(_fetchSeasonEpisodes(seasonIndex));
+    if (PlatformDetector.isTV()) {
+      // Fork (TV season tabs): the rail now shows a different season in the
+      // same slot, so its selection goes back to that season's first episode.
+      _clearTvDetailFocusedEpisode();
+      _pruneDistantSeasonPages(seasonIndex);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_canUseDetail) return;
+        _tvDetailRailKey.currentState?.resetActiveHubSelection();
+      });
+    }
+  }
+
+  /// Fork: on TV, a show with several seasons gets one row of season tabs and
+  /// a single episode rail for the selected season, instead of one stacked
+  /// rail per season.
+  bool _showTvSeasonTabs(MediaItem metadata) {
+    return PlatformDetector.isTV() &&
+        metadata.isShow &&
+        !_showEpisodesDirectly &&
+        !_seasonsLoadFailed &&
+        _seasons.length > 1 &&
+        _selectedSeasonIndex >= 0 &&
+        _selectedSeasonIndex < _seasons.length &&
+        _seasonTabFocusNodes.length >= _seasons.length;
+  }
+
+  bool get _tvSeasonTabHasFocus => _seasonTabFocusNodes.any((node) => node.hasFocus);
+
+  /// Fork: moves D-pad focus to the selected season tab. Returns false when
+  /// the screen has no TV season tabs, so callers fall back to their old target.
+  bool _focusTvSeasonTabs() {
+    if (!_showTvSeasonTabs(_metadata)) return false;
+    _clearTvDetailFocusedEpisode();
+    _seasonTabFocusNodes[_selectedSeasonIndex].requestFocus();
+    _scrollSeasonTabIntoView(_selectedSeasonIndex);
+    return true;
+  }
+
+  /// Fork: UP from the TV rail lands on the season tabs when they exist.
+  void _focusAboveTvDetailRail() {
+    if (_focusTvSeasonTabs()) return;
+    _focusTvDetailActionRow();
   }
 
   /// Mirror the pager's items for [seasonId] into the visible episode list when
@@ -2403,6 +2450,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     final metadata = _metadata;
 
     if (PlatformDetector.isTV()) {
+      if (_focusTvSeasonTabs()) return;
       _tvDetailRailKey.currentState?.requestFocus();
       return;
     }
@@ -2574,12 +2622,18 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                   onSecondaryTapDown: (details) => tapPosition = details.globalPosition,
                   onSecondaryTap: () => _showSeasonTabContextMenu(index, position: tapPosition),
                   child: FocusableTabChip(
-                    label: season.title!,
+                    label: season.title?.isNotEmpty == true
+                        ? season.title!
+                        : (season.displaySubtitle ?? season.displayTitle),
                     isSelected: index == _selectedSeasonIndex,
                     topImage: topImage,
                     focusNode: _seasonTabFocusNodes.length > index ? _seasonTabFocusNodes[index] : null,
                     onSelect: () {
-                      if (index == _selectedSeasonIndex) return;
+                      if (index == _selectedSeasonIndex) {
+                        // Fork: OK on the current season tab drops into its episodes on TV.
+                        if (PlatformDetector.isTV()) _tvDetailRailKey.currentState?.requestFocus();
+                        return;
+                      }
                       _selectSeason(index);
                     },
                     onNavigateLeft: index > 0
@@ -2605,8 +2659,13 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                       }
                       _firstEpisodeFocusNode.requestFocus();
                     },
+                    onNavigateUp: PlatformDetector.isTV() ? _focusTvDetailActionRow : null,
                     onLongPress: () => _showSeasonTabContextMenu(index),
                     onBack: () {
+                      if (PlatformDetector.isTV()) {
+                        _popMediaDetailIfBackNotSuppressed();
+                        return;
+                      }
                       Navigator.of(context).maybePop();
                     },
                   ),
@@ -3658,7 +3717,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     final stableRailHeight = _tvDetailStableRailHeight;
     final railHeight = stableRailHeight == null || rawRailHeight > stableRailHeight ? rawRailHeight : stableRailHeight;
     final railTopPadding = 12 * detailScale;
-    final foregroundBottom = (railHeight - railTopPadding) + (_tvDetailActionRailGap * detailScale);
+    // Fork: the season tab row sits between the action row and the rail.
+    final showSeasonTabs = _showTvSeasonTabs(metadata);
+    final seasonTabsBottom = (railHeight - railTopPadding) + (_tvDetailActionRailGap * detailScale);
+    final foregroundBottom = showSeasonTabs
+        ? seasonTabsBottom + _tvDetailSeasonTabsHeight + _tvDetailSeasonTabsGap
+        : seasonTabsBottom;
     final spotlightLeft = (24 * detailScale).clamp(18.0, 40.0).toDouble();
 
     final revealContent = Stack(
@@ -3727,7 +3791,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
               trailingForHub: _tvDetailTrailingState,
               leadingItemForHub: _tvDetailLeadingItemForHub,
               onRetryHub: _retryTvDetailHub,
-              onNavigateUp: _focusTvDetailActionRow,
+              onNavigateUp: _focusAboveTvDetailRail,
               onBack: _popMediaDetailIfBackNotSuppressed,
               tallPosterScale: _tvDetailTallPosterScale,
               widePosterScaleForHub: _tvDetailWidePosterScaleForHub,
@@ -3736,6 +3800,14 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
               episodePosterModeForHub: _tvDetailEpisodePosterModeForHub,
               showTitleImpliedForHub: _isTvDetailEpisodeHub,
             ),
+          ),
+        if (showSeasonTabs)
+          Positioned(
+            left: spotlightLeft,
+            right: spotlightLeft,
+            bottom: seasonTabsBottom,
+            height: _tvDetailSeasonTabsHeight,
+            child: Align(alignment: Alignment.centerLeft, child: _buildSeasonTabs()),
           ),
       ],
     );
@@ -4248,7 +4320,11 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       // Emit a hub for every season so TV users can choose a season before its
       // episodes are fetched. Extra pages load in-place when focus reaches the
       // last loaded episode; the trailing slot is reserved for loading/retry.
+      // Fork: with season tabs, only the selected season gets a rail; the
+      // tabs above it switch seasons.
+      final tabbed = _showTvSeasonTabs(metadata);
       for (var i = 0; i < _seasons.length; i++) {
+        if (tabbed && i != _selectedSeasonIndex) continue;
         final season = _seasons[i];
         final state = _seasonEpisodePager.stateFor(season.id);
         final episodes = i == _selectedSeasonIndex ? _episodes : state.items;
@@ -4256,7 +4332,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         hubs.add(
           MediaHub(
             id: '$_tvDetailSeasonHubIdPrefix$i',
-            title: season.title?.isNotEmpty == true ? season.title! : (season.displaySubtitle ?? season.displayTitle),
+            title: tabbed
+                ? t.libraries.groupings.episodes
+                : (season.title?.isNotEmpty == true ? season.title! : (season.displaySubtitle ?? season.displayTitle)),
             type: 'episode',
             items: episodes,
             size: total,
@@ -4386,7 +4464,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   }
 
   void _handleTvDetailFocusedRailItemChanged(MediaHub hub, MediaItem item) {
-    if (_tvDetailActionRowHasFocus) {
+    if (_tvDetailActionRowHasFocus || _tvSeasonTabHasFocus) {
       _clearTvDetailFocusedEpisode();
       return;
     }

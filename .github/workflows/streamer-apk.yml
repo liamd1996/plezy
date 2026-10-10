@@ -1,0 +1,101 @@
+# Fork-only workflow: builds the Android APKs of the `streamer` branch and
+# publishes them as plain .apk release assets, so the latest build is always at
+#   https://github.com/<owner>/plezy/releases/latest/download/plezy-android-armeabi-v7a.apk
+# (the address to give AFTVnews Downloader on a Google TV Streamer).
+name: Streamer APK
+
+on:
+  push:
+    branches: [streamer]
+  workflow_dispatch:
+
+env:
+  # Same SDK as the upstream build workflow for this release.
+  FLUTTER_VERSION: "3.47.1"
+
+concurrency:
+  group: streamer-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Java
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile --no-example
+
+      # Optional stable signing key. Without these secrets the APK is signed
+      # with the runner's throwaway debug key, and each new build must be
+      # installed after uninstalling the previous one.
+      - name: Configure Android signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [[ -z "$KEYSTORE_BASE64" ]]; then
+            echo "No signing secrets: using debug signing."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          {
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "storeFile=upload-keystore.jks"
+          } > android/key.properties
+
+      - name: Build APKs
+        run: >
+          flutter build apk --release --split-per-abi
+          --target-platform android-arm,android-arm64
+          --dart-define=GIT_COMMIT=${{ github.sha }}
+
+      - name: Clean up signing material
+        if: always()
+        run: rm -f android/app/upload-keystore.jks android/key.properties
+
+      - name: Rename APKs
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/plezy-android-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/plezy-android-arm64-v8a.apk
+          ls -l dist
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: plezy-streamer-apk
+          path: dist/*.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="streamer-${{ github.run_number }}"
+          gh release create "$tag" dist/*.apk \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "Plezy Streamer build ${{ github.run_number }}" \
+            --notes "Plezy with season tabs on the TV show page and the downloads UI hidden on Android TV. Unofficial personal build." \
+            --latest
