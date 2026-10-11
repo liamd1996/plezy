@@ -23,6 +23,7 @@ internal object StreamerThemeChannel {
 
   private val handler = Handler(Looper.getMainLooper())
   private var player: MediaPlayer? = null
+  private var level = 0.25f
 
   fun attach(activity: Activity, messenger: BinaryMessenger) {
     MethodChannel(messenger, CHANNEL).setMethodCallHandler { call, result ->
@@ -34,7 +35,7 @@ internal object StreamerThemeChannel {
             return@setMethodCallHandler
           }
           val headers = call.argument<Map<String, String>>("headers") ?: emptyMap()
-          val volume = (call.argument<Double>("volume") ?: 0.5).toFloat().coerceIn(0f, 1f)
+          val volume = (call.argument<Double>("volume") ?: 0.25).toFloat().coerceIn(0f, 1f)
           play(activity, url, headers, volume)
           result.success(null)
         }
@@ -68,6 +69,7 @@ internal object StreamerThemeChannel {
 
   private fun play(activity: Activity, url: String, headers: Map<String, String>, volume: Float) {
     stop(fade = false)
+    level = volume
     val created = MediaPlayer()
     player = created
     try {
@@ -115,8 +117,8 @@ internal object StreamerThemeChannel {
           return
         }
         try {
-          val level = 0.5f * step / FADE_STEPS
-          current.setVolume(level, level)
+          val faded = level * step / FADE_STEPS
+          current.setVolume(faded, faded)
         } catch (e: IllegalStateException) {
           release(current)
           return

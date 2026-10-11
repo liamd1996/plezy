@@ -16,7 +16,7 @@ abstract final class StreamerThemeMusic {
   static const _channel = MethodChannel('com.plezy.fork/theme');
 
   /// Playback level, well under the video volume.
-  static const double _volume = 0.5;
+  static const double _volume = 0.25;
 
   static bool get enabled => StreamerFork.isAndroidTv;
 
