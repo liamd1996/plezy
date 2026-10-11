@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'app_logger.dart';
 import 'async_singleton.dart';
 import 'device_channel.dart';
+import '../fork/streamer_fork.dart';
 
 const _androidFeatureTelevision = 'android.hardware.type.television';
 const _androidFeatureLeanback = 'android.software.leanback';
@@ -224,7 +225,8 @@ class PlatformDetector {
   /// also hides it on Android TV / Google TV, where offline downloads are not
   /// wanted. Phones, tablets and desktop keep downloads.
   static bool hideDownloads() {
-    return isAppleTV() || (Platform.isAndroid && isTV());
+    // FORK: the rule lives in lib/fork/streamer_fork.dart.
+    return StreamerFork.hideDownloads();
   }
 
   /// True on Android Automotive OS head units.

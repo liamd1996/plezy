@@ -43,6 +43,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile --no-example
 
+      # Fails within a couple of minutes on a compile error, before the long
+      # Android build starts. Lints are reported but do not fail the run.
+      - name: Analyze
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings lib
+
       # Stable signing key, so a new build installs over the previous one and
       # keeps its settings. The keystore lives in the ANDROID_KEYSTORE_BASE64
       # repository secret; its password is not sensitive on its own. Without
@@ -71,6 +76,8 @@ jobs:
           flutter build apk --release --split-per-abi
           --target-platform android-arm,android-arm64
           --dart-define=GIT_COMMIT=${{ github.sha }}
+          --dart-define=STREAMER_BUILD=${{ github.run_number }}
+          --dart-define=STREAMER_REPO=${{ github.repository }}
 
       - name: Clean up signing material
         if: always()
@@ -98,5 +105,5 @@ jobs:
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
             --title "Plezy Streamer build ${{ github.run_number }}" \
-            --notes "Plezy with season tabs on the TV show page and the downloads UI hidden on Android TV. Unofficial personal build, installs next to the official app. Signing: $SIGNING." \
+            --notes "Plezy Streamer build ${{ github.run_number }}: unofficial personal build of Plezy with a lighter, Plex-like Android TV interface. Installs next to the official app. Signing: $SIGNING." \
             --latest

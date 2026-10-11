@@ -452,7 +452,7 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
     _focusNode.requestFocus();
   }
 
-  /// Fork: puts the selection of the active hub back on its first media item
+  /// FORK: puts the selection of the active hub back on its first media item
   /// and scrolls it into place. Called after the active hub's content was
   /// swapped from outside (the TV detail season tabs), once that frame has
   /// been laid out.

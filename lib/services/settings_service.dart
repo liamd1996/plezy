@@ -39,6 +39,7 @@ import '../utils/platform_detector.dart';
 import 'trackers/tracker_constants.dart';
 import '../profiles/profile.dart';
 import '../watch_together/services/watch_together_relay_endpoint.dart';
+import '../fork/streamer_fork.dart';
 
 enum ThemeMode { system, light, dark, oled }
 
@@ -573,7 +574,12 @@ class SettingsService extends BaseSharedPreferencesService {
   static const seekTimeLarge = IntPref('seek_time_large', defaultValue: 30);
   static const rewindOnResume = IntPref('rewind_on_resume');
   static const showHeroSection = BoolPref('show_hero_section', defaultValue: true);
-  static const tvFullCardLayout = BoolPref('tv_full_card_layout', defaultValue: false);
+  // FORK: on by default on Android TV.
+  static const tvFullCardLayout = BoolPref(
+    'tv_full_card_layout',
+    defaultValue: false,
+    defaultValueProvider: StreamerFork.tvDefaultOn,
+  );
   static const focusGlow = BoolPref('focus_glow', defaultValue: true);
   static const useGlobalHubs = BoolPref('use_global_hubs', defaultValue: true);
   static const showServerNameOnHubs = BoolPref('show_server_name_on_hubs');
@@ -906,7 +912,11 @@ class SettingsService extends BaseSharedPreferencesService {
     defaultValue: GridSpacing.tight,
   );
   static const automotiveUiScale = _AutomotiveUiScalePref();
-  static const tvCornerSpotlightBackdrop = BoolPref('tv_corner_spotlight_backdrop');
+  // FORK: on by default on Android TV.
+  static const tvCornerSpotlightBackdrop = BoolPref(
+    'tv_corner_spotlight_backdrop',
+    defaultValueProvider: StreamerFork.tvDefaultOn,
+  );
   static const episodePosterMode = _EpisodePosterModePref();
   static const continueWatchingAction = EnumPref<ContinueWatchingAction>(
     'continue_watching_action',

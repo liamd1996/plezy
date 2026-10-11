@@ -8,6 +8,7 @@ import '../services/settings_service.dart';
 import '../theme/mono_tokens.dart';
 import 'app_icon.dart';
 import 'media_progress_bar.dart';
+import '../fork/streamer_fork.dart';
 import 'unwatched_count_badge.dart';
 
 /// Size preset for [WatchedIndicator]: [standard] for grid/poster cards,
@@ -139,7 +140,10 @@ class WatchedIndicator extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: item.leafWatchFraction,
                 backgroundColor: tokens(context).outline,
-                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                // FORK: Plex orange on Android TV.
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  StreamerFork.accentOr(Theme.of(context).colorScheme.primary),
+                ),
                 minHeight: size.barMinHeight,
               ),
             ),

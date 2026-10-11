@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../focus/focusable_chip_mixin.dart';
+import '../fork/streamer_fork.dart';
 import '../focus/input_mode_tracker.dart';
 import '../utils/platform_detector.dart';
 import 'focus_builders.dart';
@@ -140,15 +141,23 @@ class _FocusableTabChipState extends State<FocusableTabChip> with FocusableChipS
       }
     }
 
+    // FORK: Plex-style tabs on Android TV (underlined selection, light focus block).
+    final forkStyle = StreamerFork.tabChipStyle(colorScheme, selected: widget.isSelected, focused: showFocus);
+    if (forkStyle != null) {
+      backgroundColor = forkStyle.background;
+      foregroundColor = forkStyle.foreground;
+    }
+
     final isHighlighted = showFocus || widget.isSelected;
 
-    final label = Text(
+    final labelText = Text(
       widget.label,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
         color: foregroundColor,
         fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.normal,
       ),
     );
+    final Widget label = forkStyle != null && forkStyle.underline ? StreamerFork.underlineTabLabel(labelText) : labelText;
 
     final hasImage = widget.topImage != null;
     return FocusBuilders.buildFocusableChip(

@@ -102,6 +102,7 @@ import '../widgets/tv_spotlight_background.dart';
 import '../providers/account_preferences_controller.dart';
 import '../services/playback_track_preview.dart';
 import '../utils/error_message_utils.dart';
+import '../fork/streamer_fork.dart';
 
 part 'media_detail/action_buttons.dart';
 part 'media_detail/playback_tracks_status.dart';
@@ -130,7 +131,7 @@ const double _tvDetailEpisodeThumbnailScale = 0.72;
 const double _tvDetailActionSize = 46;
 const double _tvDetailActionRailGap = 4;
 
-/// Fork: height of the season tab row shown above the TV detail rail. Tab
+/// FORK: height of the season tab row shown above the TV detail rail. Tab
 /// chips are not TV-scaled, so this is a fixed logical height.
 const double _tvDetailSeasonTabsHeight = 44;
 const double _tvDetailSeasonTabsGap = 10;
@@ -2142,7 +2143,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     });
     unawaited(_fetchSeasonEpisodes(seasonIndex));
     if (PlatformDetector.isTV()) {
-      // Fork (TV season tabs): the rail now shows a different season in the
+      // FORK: the rail now shows a different season in the
       // same slot, so its selection goes back to that season's first episode.
       _clearTvDetailFocusedEpisode();
       _pruneDistantSeasonPages(seasonIndex);
@@ -2153,7 +2154,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     }
   }
 
-  /// Fork: on TV, a show with several seasons gets one row of season tabs and
+  /// FORK: on TV, a show with several seasons gets one row of season tabs and
   /// a single episode rail for the selected season, instead of one stacked
   /// rail per season.
   bool _showTvSeasonTabs(MediaItem metadata) {
@@ -2169,7 +2170,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
   bool get _tvSeasonTabHasFocus => _seasonTabFocusNodes.any((node) => node.hasFocus);
 
-  /// Fork: moves D-pad focus to the selected season tab. Returns false when
+  /// FORK: moves D-pad focus to the selected season tab. Returns false when
   /// the screen has no TV season tabs, so callers fall back to their old target.
   bool _focusTvSeasonTabs() {
     if (!_showTvSeasonTabs(_metadata)) return false;
@@ -2179,7 +2180,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     return true;
   }
 
-  /// Fork: UP from the TV rail lands on the season tabs when they exist.
+  /// FORK: UP from the TV rail lands on the season tabs when they exist.
   void _focusAboveTvDetailRail() {
     if (_focusTvSeasonTabs()) return;
     _focusTvDetailActionRow();
@@ -2630,7 +2631,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                     focusNode: _seasonTabFocusNodes.length > index ? _seasonTabFocusNodes[index] : null,
                     onSelect: () {
                       if (index == _selectedSeasonIndex) {
-                        // Fork: OK on the current season tab drops into its episodes on TV.
+                        // FORK: OK on the current season tab drops into its episodes on TV.
                         if (PlatformDetector.isTV()) _tvDetailRailKey.currentState?.requestFocus();
                         return;
                       }
@@ -3717,7 +3718,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     final stableRailHeight = _tvDetailStableRailHeight;
     final railHeight = stableRailHeight == null || rawRailHeight > stableRailHeight ? rawRailHeight : stableRailHeight;
     final railTopPadding = 12 * detailScale;
-    // Fork: the season tab row sits between the action row and the rail.
+    // FORK: the season tab row sits between the action row and the rail.
     final showSeasonTabs = _showTvSeasonTabs(metadata);
     final seasonTabsBottom = (railHeight - railTopPadding) + (_tvDetailActionRailGap * detailScale);
     final foregroundBottom = showSeasonTabs
@@ -3862,9 +3863,10 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         if (constraints.maxHeight <= 0 || constraints.maxWidth <= 0) return const SizedBox.shrink();
 
         final availableHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 264.0;
-        final desiredLogoHeight = 220 * scale;
+        // FORK: smaller title artwork on Android TV.
+        final desiredLogoHeight = 220 * scale * StreamerFork.tvLogoFactor;
         final minLogoHeight = 60 * scale;
-        final desiredLogoWidth = 790 * scale;
+        final desiredLogoWidth = 790 * scale * StreamerFork.tvLogoFactor;
         final episodeTitleLineHeight = 30 * scale;
         final episodeTitleGap = 4 * scale;
         final metadataLineHeight = 22 * scale;
@@ -4320,7 +4322,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       // Emit a hub for every season so TV users can choose a season before its
       // episodes are fetched. Extra pages load in-place when focus reaches the
       // last loaded episode; the trailing slot is reserved for loading/retry.
-      // Fork: with season tabs, only the selected season gets a rail; the
+      // FORK: with season tabs, only the selected season gets a rail; the
       // tabs above it switch seasons.
       final tabbed = _showTvSeasonTabs(metadata);
       for (var i = 0; i < _seasons.length; i++) {

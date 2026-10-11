@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../fork/streamer_fork.dart';
 
 /// Reusable media progress bar widget for displaying watch progress
 ///
@@ -27,7 +28,10 @@ class MediaProgressBar extends StatelessWidget {
     return LinearProgressIndicator(
       value: progress.clamp(0.0, 1.0),
       backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.surfaceContainerHighest,
-      valueColor: AlwaysStoppedAnimation<Color>(valueColor ?? Theme.of(context).colorScheme.primary),
+      // FORK: Plex orange on Android TV.
+      valueColor: AlwaysStoppedAnimation<Color>(
+        valueColor ?? StreamerFork.accentOr(Theme.of(context).colorScheme.primary),
+      ),
       minHeight: minHeight ?? 4,
     );
   }

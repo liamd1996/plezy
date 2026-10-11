@@ -104,6 +104,8 @@ import 'services/startup_diagnostics.dart';
 import 'utils/dialogs.dart';
 import 'widgets/dialog_action_button.dart';
 import 'widgets/startup_failure_view.dart';
+import 'fork/streamer_fork.dart';
+import 'fork/streamer_update.dart';
 
 const bool _enableSentry = bool.fromEnvironment('ENABLE_SENTRY', defaultValue: false);
 const String _sentryDsn = 'https://6a1a6ef8c72140099b2798973c1bfb2f@bugs.plezy.app/1';
@@ -155,6 +157,8 @@ void main() {
   // target in Flutter's tool), so register platform stores manually for
   // the plugins we use.
   _registerTvosPlatformPlugins();
+  // FORK: remove the APK left behind by the in-app updater.
+  unawaited(StreamerUpdateService.deleteDownloadedApk());
   _bootstrapApp();
 }
 
@@ -1928,7 +1932,8 @@ class FormFactorScale extends StatelessWidget {
     if (PlatformDetector.isAppleTV()) {
       return _scaledSurface(child: child, scale: _appleTvScale, zeroInsets: true);
     }
-    if (!PlatformDetector.isAutomotive()) return child;
+    // FORK: smaller interface on Android TV (no-op elsewhere).
+    if (!PlatformDetector.isAutomotive()) return StreamerFork.scaleInterface(child);
 
     // Car system bars can sit on the left or right, are opaque, and may be
     // impossible to hide (OEM policy). Nothing is worth drawing under them,

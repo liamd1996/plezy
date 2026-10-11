@@ -21,6 +21,7 @@ import 'settings_builder.dart';
 import 'media_rating_badge.dart';
 import 'optimized_media_image.dart' show ClearLogoImage, blurArtwork;
 import 'rasterized_gradient.dart';
+import '../fork/streamer_fork.dart';
 
 class TvSpotlightBackground extends StatelessWidget {
   final MediaItem? item;
@@ -374,11 +375,16 @@ class TvSpotlightBackground extends StatelessWidget {
 
   double _sectionGap(double scale) => (compact ? 10 : 16) * scale;
 
+  // FORK: smaller title artwork on Android TV (tvLogoFactor).
   double _logoWidth(double scale) =>
-      (compact ? TvLayoutConstants.compactHeroLogoWidth : TvLayoutConstants.heroLogoWidth) * scale;
+      (compact ? TvLayoutConstants.compactHeroLogoWidth : TvLayoutConstants.heroLogoWidth) *
+      scale *
+      StreamerFork.tvLogoFactor;
 
   double _logoHeight(double scale) =>
-      (compact ? TvLayoutConstants.compactHeroLogoHeight : TvLayoutConstants.heroLogoHeight) * scale;
+      (compact ? TvLayoutConstants.compactHeroLogoHeight : TvLayoutConstants.heroLogoHeight) *
+      scale *
+      StreamerFork.tvLogoFactor;
 
   double _titleFontSize(double scale) => (compact ? 44 : 54) * scale;
 

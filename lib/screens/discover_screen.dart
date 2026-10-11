@@ -66,6 +66,7 @@ import '../watch_together/watch_together.dart';
 import '../providers/companion_remote_provider.dart';
 import '../widgets/companion_remote/remote_session_dialog.dart';
 import 'companion_remote/mobile_remote_screen.dart';
+import '../fork/streamer_fork.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -821,6 +822,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                 actions: [
                   FocusableAction(icon: Symbols.refresh_rounded, iconColor: foregroundColor, onPressed: manualRefresh),
                   // Watch Together
+                  // FORK: hidden on Android TV.
+                  if (!StreamerFork.hideSocialButtons)
                   FocusableAction(
                     onPressed: openWatchTogether,
                     child: Stack(
@@ -854,6 +857,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                     ),
                   ),
                   // Companion Remote
+                  // FORK: hidden on Android TV.
+                  if (!StreamerFork.hideSocialButtons)
                   FocusableAction(
                     onPressed: openCompanionRemote,
                     child: Stack(

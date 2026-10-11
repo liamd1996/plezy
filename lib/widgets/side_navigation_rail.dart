@@ -33,6 +33,7 @@ import '../services/fullscreen_state_manager.dart';
 import '../theme/mono_tokens.dart';
 import '../widgets/backend_badge.dart';
 import '../i18n/strings.g.dart';
+import '../fork/streamer_fork.dart';
 
 enum _LibraryNavSection { visible, hidden }
 
@@ -189,7 +190,8 @@ class NavigationRailItem extends StatelessWidget {
         isSelected && selectedIcon != null ? selectedIcon! : icon,
         fill: 1,
         size: iconSize,
-        color: isSelected ? t.text : t.textMuted,
+        // FORK: the selected destination's icon takes the Plex orange on Android TV.
+        color: isSelected ? StreamerFork.accentOr(t.text) : t.textMuted,
       );
 
   static double _collapsedItemWidth(BuildContext context) =>
@@ -628,7 +630,8 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
         return _kExplore;
       case NavigationTabId.libraries:
         final libKey = widget.selectedLibraryKey;
-        if (libKey != null && _librariesExpanded) {
+        // FORK: the Plex-style rail always shows its library rows.
+        if (libKey != null && (_librariesExpanded || StreamerFork.plexSidebar)) {
           final visibleKey = '$_kLibraryItemPrefix:${_LibraryNavSection.visible.name}:$libKey';
           if (_mountedFocusNodeFor(visibleKey) != null) return visibleKey;
           if (_hiddenLibrariesExpanded) {
@@ -760,6 +763,23 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
     required bool hasExplore,
     required bool isCollapsed,
   }) {
+    // FORK: Plex-style rail order: Search, Home, the libraries, then Settings.
+    if (StreamerFork.plexSidebar) {
+      return [
+        if (widget.isOfflineMode && widget.onReconnect != null) _kReconnect,
+        if (!widget.isOfflineMode) ...[
+          _kSearch,
+          _kHome,
+          if (hasNowPlaying) _kNowPlaying,
+          ..._focusKeysForLibraryRows(visibleRows),
+          if (hasLiveTv) 'liveTv',
+          if (hasExplore) _kExplore,
+        ],
+        if (_showDownloads) _kDownloads,
+        _kSettings,
+        if (_showFullscreenToggle) _kFullscreen,
+      ];
+    }
     return [
       if (widget.isOfflineMode && widget.onReconnect != null) _kReconnect,
       if (!widget.isOfflineMode) ...[
@@ -905,7 +925,9 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
         final hasExplore = hasExploreSource && SettingsService.instance.read(SettingsService.showExploreTab);
         // Server grouping: only when multi-server AND the user-facing toggle is on.
         final groupByServerSetting = SettingsService.instance.read(SettingsService.groupLibrariesByServer);
-        final showServerHeaders = serverIds.length > 1 && groupByServerSetting;
+        // FORK: the Plex-style rail lists libraries flat, without server headers.
+        final forkSidebar = StreamerFork.plexSidebar;
+        final showServerHeaders = !forkSidebar && serverIds.length > 1 && groupByServerSetting;
         _collapsedServerGroupKeys.retainAll(
           _buildServerGroupStateKeys(visibleLibraries, hiddenLibraries, showServerHeaders: showServerHeaders),
         );
@@ -1018,6 +1040,11 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
                                       const SizedBox(height: _itemGap),
                                     ],
                                     if (!widget.isOfflineMode) ...[
+                                      // FORK: Search sits above Home in the Plex-style rail.
+                                      if (forkSidebar) ...[
+                                        _buildSearchNavItem(isCollapsed: isCollapsed),
+                                        const SizedBox(height: _itemGap),
+                                      ],
                                       _buildNavItem(
                                         icon: Symbols.home_rounded,
                                         selectedIcon: Symbols.home_rounded,
@@ -1033,14 +1060,31 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
                                         _buildNowPlayingItem(nowPlayingTrack, musicService, isCollapsed: isCollapsed),
                                         const SizedBox(height: _itemGap),
                                       ],
-                                      _buildLibrariesSection(
-                                        visibleRows,
-                                        hiddenRows,
-                                        hiddenLibraries.length,
-                                        t,
-                                        isCollapsed: isCollapsed,
-                                      ),
-                                      const SizedBox(height: _itemGap),
+                                      // FORK: libraries as plain destinations, visible as icons
+                                      // while the rail is collapsed.
+                                      if (forkSidebar)
+                                        for (final row in visibleRows)
+                                          if (row is _LibraryItemRow) ...[
+                                            _buildLibraryItem(
+                                              row.section,
+                                              row.library,
+                                              t,
+                                              showServerName: row.showServerName,
+                                              collapsible: true,
+                                              isCollapsed: isCollapsed,
+                                            ),
+                                            const SizedBox(height: _itemGap),
+                                          ],
+                                      if (!forkSidebar) ...[
+                                        _buildLibrariesSection(
+                                          visibleRows,
+                                          hiddenRows,
+                                          hiddenLibraries.length,
+                                          t,
+                                          isCollapsed: isCollapsed,
+                                        ),
+                                        const SizedBox(height: _itemGap),
+                                      ],
                                       if (context.watch<MultiServerProvider>().hasLiveTv) ...[
                                         _buildNavItem(
                                           icon: Symbols.live_tv_rounded,
@@ -1065,16 +1109,10 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
                                         ),
                                         const SizedBox(height: _itemGap),
                                       ],
-                                      _buildNavItem(
-                                        icon: Symbols.search_rounded,
-                                        selectedIcon: Symbols.search_rounded,
-                                        label: Translations.of(context).common.search,
-                                        isSelected: widget.selectedTab == NavigationTabId.search,
-                                        onTap: () => widget.onDestinationSelected(NavigationTabId.search),
-                                        focusNode: _focusTracker.get(_kSearch),
-                                        isCollapsed: isCollapsed,
-                                      ),
-                                      const SizedBox(height: _itemGap),
+                                      if (!forkSidebar) ...[
+                                        _buildSearchNavItem(isCollapsed: isCollapsed),
+                                        const SizedBox(height: _itemGap),
+                                      ],
                                     ],
                                     // Downloads (hidden on Apple TV — no user
                                     // file storage)
@@ -1090,19 +1128,19 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
                                       ),
                                       const SizedBox(height: _itemGap),
                                     ],
-                                    _buildNavItem(
-                                      icon: Symbols.settings_rounded,
-                                      selectedIcon: Symbols.settings_rounded,
-                                      label: Translations.of(context).common.settings,
-                                      isSelected: widget.selectedTab == NavigationTabId.settings,
-                                      onTap: () => widget.onDestinationSelected(NavigationTabId.settings),
-                                      focusNode: _focusTracker.get(_kSettings),
-                                      isCollapsed: isCollapsed,
-                                    ),
+                                    if (!forkSidebar) _buildSettingsNavItem(isCollapsed: isCollapsed),
                                   ],
                                 ),
                               ),
                             ),
+                            // FORK: Settings pinned to the bottom of the Plex-style rail.
+                            if (forkSidebar)
+                              AnimatedPadding(
+                                padding: .fromLTRB(horizontalPadding, 0, horizontalPadding, 12),
+                                duration: expandDuration,
+                                curve: expandCurve,
+                                child: _buildSettingsNavItem(isCollapsed: isCollapsed),
+                              ),
                             if (_showFullscreenToggle)
                               AnimatedPadding(
                                 padding: .fromLTRB(horizontalPadding, 0, horizontalPadding, 12),
@@ -1121,6 +1159,31 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
           ),
         );
       },
+    );
+  }
+
+  // FORK: Search and Settings extracted so the Plex-style rail can place them.
+  Widget _buildSearchNavItem({required bool isCollapsed}) {
+    return _buildNavItem(
+      icon: Symbols.search_rounded,
+      selectedIcon: Symbols.search_rounded,
+      label: Translations.of(context).common.search,
+      isSelected: widget.selectedTab == NavigationTabId.search,
+      onTap: () => widget.onDestinationSelected(NavigationTabId.search),
+      focusNode: _focusTracker.get(_kSearch),
+      isCollapsed: isCollapsed,
+    );
+  }
+
+  Widget _buildSettingsNavItem({required bool isCollapsed}) {
+    return _buildNavItem(
+      icon: Symbols.settings_rounded,
+      selectedIcon: Symbols.settings_rounded,
+      label: Translations.of(context).common.settings,
+      isSelected: widget.selectedTab == NavigationTabId.settings,
+      onTap: () => widget.onDestinationSelected(NavigationTabId.settings),
+      focusNode: _focusTracker.get(_kSettings),
+      isCollapsed: isCollapsed,
     );
   }
 
@@ -1503,7 +1566,15 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
     );
   }
 
-  Widget _buildLibraryItem(_LibraryNavSection section, MediaLibrary library, dynamic t, {bool showServerName = false}) {
+  Widget _buildLibraryItem(
+    _LibraryNavSection section,
+    MediaLibrary library,
+    dynamic t, {
+    bool showServerName = false,
+    // FORK: the Plex-style rail keeps library rows as icons while collapsed.
+    bool collapsible = false,
+    bool isCollapsed = false,
+  }) {
     final isSelected =
         widget.selectedTab == NavigationTabId.libraries && widget.selectedLibraryKey == library.globalKey;
     final focusKey = _libraryItemFocusKey(section, library);
@@ -1533,6 +1604,8 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
             ),
         ],
       ),
+      collapsedLabel: collapsible ? library.title : null,
+      isCollapsed: collapsible && isCollapsed,
       isSelected: isSelected,
       onTap: () => widget.onLibrarySelected(library.globalKey),
       focusNode: focusNode,
