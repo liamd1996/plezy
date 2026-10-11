@@ -8,7 +8,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'package:material_symbols_icons/symbols.dart';
+
+import '../media/media_item.dart';
+import '../media/media_item_types.dart';
 import '../utils/platform_detector.dart';
+import '../widgets/app_icon.dart';
 
 /// Result of [StreamerFork.tabChipStyle].
 typedef StreamerTabChipStyle = ({Color background, Color foreground, bool underline});
@@ -89,9 +94,67 @@ abstract final class StreamerFork {
     );
   }
 
-  /// Extra shrink of the title artwork (clear logo) in the TV hero and on the
-  /// TV detail page, which upstream draws very large.
-  static double get tvLogoFactor => isAndroidTv ? 0.6 : 1.0;
+  /// Titles as plain text on Android TV, instead of each item's clear-logo
+  /// artwork, and how much smaller than upstream's text title they are drawn.
+  static bool get textTitles => isAndroidTv;
+  static double get textTitleFactor => isAndroidTv ? 0.8 : 1.0;
+
+  /// Gutter between image-only cards in rails and grids; null off Android TV.
+  static double? cardGapForScale(double scale) => isAndroidTv ? (20 * scale).clamp(14, 30).toDouble() : null;
+
+  // --------------------------------------------------------------------------
+  // Cards
+  // --------------------------------------------------------------------------
+
+  /// Round cast portraits with the name underneath.
+  static bool get roundActors => isAndroidTv;
+
+  /// Caption height under a round portrait, before the rail's scale.
+  static double get roundActorLabelHeight => roundActors ? 46 : 0;
+
+  /// "E7" badge (with a check when watched) in the top-right corner of an
+  /// episode thumbnail. Null when the card is not an episode or off Android TV.
+  static Widget? episodeBadge(MediaItem item, {required bool showWatched}) {
+    final number = item.index;
+    if (!isAndroidTv || !item.isEpisode || number == null) return null;
+    final watched = showWatched && item.isWatched && !item.hasActiveProgress;
+    return Positioned(
+      top: 7,
+      right: 7,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Color(0xD91C1C1E),
+          borderRadius: BorderRadius.all(Radius.circular(4)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (watched) ...[
+                const AppIcon(Symbols.check_rounded, fill: 1, size: 15, color: Colors.white),
+                const SizedBox(width: 3),
+              ],
+              Text(
+                'E$number',
+                style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.1, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Detail page
+  // --------------------------------------------------------------------------
+
+  /// Plex-style TV detail page: season tabs at the top, text title and info,
+  /// the episodes, then the action buttons with the stream details on the
+  /// same row, and the cast peeking at the bottom of the screen
+  /// (lib/screens/media_detail/fork_tv_detail.dart).
+  static bool get plexDetailLayout => isAndroidTv;
 
   // --------------------------------------------------------------------------
   // Colours

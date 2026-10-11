@@ -68,11 +68,15 @@ class WatchedIndicator extends StatelessWidget {
   /// visibility updates reactively with the caller's rebuilds.
   final bool? showUnwatchedCount;
 
+  /// FORK: set when the host draws its own watched mark (the episode badge).
+  final bool hideWatchedCheck;
+
   const WatchedIndicator({
     super.key,
     required this.item,
     this.size = WatchedIndicatorSize.standard,
     this.showUnwatchedCount,
+    this.hideWatchedCheck = false,
   });
 
   @override
@@ -89,7 +93,7 @@ class WatchedIndicator extends StatelessWidget {
     return Stack(
       children: [
         // Watched checkmark
-        if (showWatched && item.isWatched && !hasActiveProgress)
+        if (showWatched && item.isWatched && !hasActiveProgress && !hideWatchedCheck)
           Positioned(
             top: size.checkInset,
             right: size.checkInset,

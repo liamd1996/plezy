@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'platform_detector.dart';
+import '../fork/streamer_fork.dart';
 
 /// Layout and sizing constants used throughout the application
 /// Screen width breakpoints for responsive design
@@ -59,7 +60,9 @@ class GridLayoutConstants {
   static double get crossAxisSpacing => PlatformDetector.isAutomotive() ? 24 : 0;
   static double get mainAxisSpacing => PlatformDetector.isAutomotive() ? 24 : 0;
 
-  static double fullCardGridSpacingForScale(double scale) => (12 * scale).clamp(8, 18).toDouble();
+  // FORK: wider gutter between image-only cards on Android TV.
+  static double fullCardGridSpacingForScale(double scale) =>
+      StreamerFork.cardGapForScale(scale) ?? (12 * scale).clamp(8, 18).toDouble();
 
   /// Standard grid padding
   static EdgeInsets get gridPadding =>

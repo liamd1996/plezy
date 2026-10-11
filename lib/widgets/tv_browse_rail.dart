@@ -36,6 +36,7 @@ import 'media_context_menu.dart';
 import 'optimized_media_image.dart';
 import 'rasterized_gradient.dart';
 import 'settings_builder.dart';
+import '../fork/streamer_fork.dart';
 
 const _inactiveArtworkDimAlpha = 0.3;
 
@@ -87,7 +88,9 @@ class TvBrowseRailLayout {
 
   static double railInteractionExpansionForScale(double scale) => (12 * scale).clamp(8, 18).toDouble();
 
-  static double fullCardItemGapForScale(double scale) => (12 * scale).clamp(8, 18).toDouble();
+  // FORK: wider gutter between image-only cards on Android TV.
+  static double fullCardItemGapForScale(double scale) =>
+      StreamerFork.cardGapForScale(scale) ?? (12 * scale).clamp(8, 18).toDouble();
 
   static double hubStripHeightForScale(double scale) => 30 * scale;
 
@@ -167,7 +170,10 @@ class TvBrowseRailLayout {
     final posterHeight = (isPersonHub || isSquareHub)
         ? posterWidth
         : (useWideLayout ? posterWidth * 9 / 16 : posterWidth * 1.5);
-    final labelHeight = fullCardLayout ? 0.0 : ((isPersonHub ? 52 : 36) * scale);
+    // FORK: round cast portraits keep a caption under the image.
+    final labelHeight = fullCardLayout
+        ? (isPersonHub ? StreamerFork.roundActorLabelHeight * scale : 0.0)
+        : ((isPersonHub ? 52 : 36) * scale);
     final containerHeight = (posterHeight + labelHeight).ceilToDouble();
     final height = containerHeight + focusExtra + (10 * scale);
 
@@ -344,6 +350,13 @@ class TvBrowseRail extends StatefulWidget {
   final void Function(MediaHub hub)? onRetryHub;
   final void Function(MediaHub hub, int index)? onActiveHubChanged;
   final VoidCallback? onNavigateUp;
+
+  /// FORK: called on DOWN from the last hub (the rail has nowhere left to go).
+  final VoidCallback? onNavigateDown;
+
+  /// FORK: drops the rail's own gradient band and unfocused dim, for hosts
+  /// that stack several rails on one page and shade the page themselves.
+  final bool plainBackground;
   final VoidCallback? onNavigateToSidebar;
   final VoidCallback? onBack;
   final FutureOr<bool> Function(MediaHub hub, MediaItem item)? onActivateItem;
@@ -383,6 +396,8 @@ class TvBrowseRail extends StatefulWidget {
     this.onRetryHub,
     this.onActiveHubChanged,
     this.onNavigateUp,
+    this.onNavigateDown,
+    this.plainBackground = false,
     this.onNavigateToSidebar,
     this.onBack,
     this.onActivateItem,
@@ -797,7 +812,12 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
     }
 
     if (key.isDownKey) {
-      _moveHub(1);
+      // FORK: hand DOWN to the host once the last hub is reached.
+      if (_hubIndex >= widget.hubs.length - 1 && widget.onNavigateDown != null) {
+        widget.onNavigateDown!();
+      } else {
+        _moveHub(1);
+      }
       return KeyEventResult.handled;
     }
 
@@ -1226,7 +1246,8 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    _RailBleedPositioned(
+                    if (!widget.plainBackground)
+                      _RailBleedPositioned(
                       width: width,
                       targetBleedLeft: widget.backgroundBleedLeft,
                       child: RasterizedGradient(
@@ -1282,7 +1303,8 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
                     // saveLayer alive every frame (see AnimatedDimScrim).
                     // Bled under the side nav like the background gradient,
                     // so its edge doesn't seam against the nav.
-                    _RailBleedPositioned(
+                    if (!widget.plainBackground)
+                      _RailBleedPositioned(
                       width: width,
                       targetBleedLeft: widget.backgroundBleedLeft,
                       child: ListenableSelector<bool>(
@@ -1653,7 +1675,10 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
                     builder: (context, focus, child) => FocusBuilders.buildLockedFocusWrapper(
                       context: context,
                       isFocused: focus.$1,
-                      borderRadius: tokens(context).radiusSm,
+                      // FORK: circular focus ring and glow around round cast portraits.
+                      borderRadius: fullCardLayout && metrics.isPersonHub && StreamerFork.roundActors
+                          ? metrics.posterHeight / 2
+                          : tokens(context).radiusSm,
                       focusScale: fullCardLayout ? TvBrowseRailLayout.fullCardFocusScale : FocusTheme.focusScale,
                       useFocusGlow: fullCardLayout,
                       showGlow: focus.$2,
@@ -1758,6 +1783,58 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
   }) {
     final theme = Theme.of(context);
     final characterName = item.parentTitle;
+
+    // FORK: Plex-style round cast portrait with the name underneath.
+    if (fullCardLayout && StreamerFork.roundActors) {
+      return SizedBox(
+        width: cardWidth,
+        height: imageSize + StreamerFork.roundActorLabelHeight * scale,
+        child: Column(
+          children: [
+            SizedBox(
+              width: imageSize,
+              height: imageSize,
+              child: CardFocusBorder(
+                borderRadius: imageSize / 2,
+                child: ClipOval(
+                  child: OptimizedMediaImage(
+                    client: context.tryGetMediaClientWithFallback(serverIdOrNull(item.serverId)),
+                    imagePath: item.thumbPath,
+                    width: imageSize,
+                    height: imageSize,
+                    fit: BoxFit.cover,
+                    imageType: ImageType.square,
+                    fallbackIcon: Symbols.person_rounded,
+                    artworkDim: artworkDim,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 6 * scale),
+            Text(
+              item.displayTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: tokens(context).text, fontSize: 15 * scale, height: 1.15, fontWeight: FontWeight.w700),
+            ),
+            if (characterName != null && characterName.isNotEmpty)
+              Text(
+                characterName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: tokens(context).textMuted,
+                  fontSize: 13 * scale,
+                  height: 1.15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+          ],
+        ),
+      );
+    }
 
     if (fullCardLayout) {
       return SizedBox(

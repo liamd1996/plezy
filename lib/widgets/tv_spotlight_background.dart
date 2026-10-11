@@ -245,6 +245,10 @@ class TvSpotlightBackground extends StatelessWidget {
     final logoWidth = math.min(_logoWidth(scale), availableWidth);
     final logoHeight = _logoHeight(scale);
     final width = ClearLogoImage.fallbackWidthFor(logoWidth: logoWidth, available: availableWidth);
+    // FORK: plain text titles on Android TV instead of the clear-logo artwork.
+    if (StreamerFork.textTitles) {
+      return SizedBox(width: width, height: 58 * scale, child: _buildTitle(context, title));
+    }
     if (logoPath == null || logoPath.isEmpty) {
       return SizedBox(width: width, height: logoHeight, child: _buildTitle(context, title));
     }
@@ -375,18 +379,14 @@ class TvSpotlightBackground extends StatelessWidget {
 
   double _sectionGap(double scale) => (compact ? 10 : 16) * scale;
 
-  // FORK: smaller title artwork on Android TV (tvLogoFactor).
   double _logoWidth(double scale) =>
-      (compact ? TvLayoutConstants.compactHeroLogoWidth : TvLayoutConstants.heroLogoWidth) *
-      scale *
-      StreamerFork.tvLogoFactor;
+      (compact ? TvLayoutConstants.compactHeroLogoWidth : TvLayoutConstants.heroLogoWidth) * scale;
 
   double _logoHeight(double scale) =>
-      (compact ? TvLayoutConstants.compactHeroLogoHeight : TvLayoutConstants.heroLogoHeight) *
-      scale *
-      StreamerFork.tvLogoFactor;
+      (compact ? TvLayoutConstants.compactHeroLogoHeight : TvLayoutConstants.heroLogoHeight) * scale;
 
-  double _titleFontSize(double scale) => (compact ? 44 : 54) * scale;
+  // FORK: smaller text titles on Android TV.
+  double _titleFontSize(double scale) => (compact ? 44 : 54) * scale * StreamerFork.textTitleFactor;
 
   double _metadataFontSize(double scale) => (compact ? 16 : 18) * scale;
 

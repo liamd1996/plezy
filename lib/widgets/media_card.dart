@@ -40,6 +40,7 @@ import 'media_context_menu.dart';
 import 'media_card_list_layout.dart';
 import 'backend_badge.dart';
 import 'optimized_media_image.dart';
+import '../fork/streamer_fork.dart';
 
 const _failedPosterUrlCacheLimit = 512;
 final _failedPosterUrls = <String>{};
@@ -607,9 +608,15 @@ class MediaCardState extends State<MediaCard> with ContextMenuTapMixin<MediaCard
       knownHeight: knownHeight,
       artworkDim: widget.artworkDim,
     );
+    // FORK: Plex-style "E7" badge on the episode thumbnails of a show page.
+    final episodeBadge = item is MediaItem && widget.showTitleImplied
+        ? StreamerFork.episodeBadge(item, showWatched: SettingsService.instance.read(SettingsService.showWatchedIndicators))
+        : null;
     final overlays = <Widget>[
-      if (item is MediaItem && _showsWatchedIndicator(item)) WatchedIndicator(item: item),
+      if (item is MediaItem && _showsWatchedIndicator(item))
+        WatchedIndicator(item: item, hideWatchedCheck: episodeBadge != null),
       if (badgeLabels.isNotEmpty) _CatalogBadges(labels: badgeLabels),
+      ?episodeBadge,
     ];
     return ExcludeSemantics(
       child: _CatalogFocusBorder(

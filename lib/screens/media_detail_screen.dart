@@ -106,6 +106,7 @@ import '../fork/streamer_fork.dart';
 
 part 'media_detail/action_buttons.dart';
 part 'media_detail/playback_tracks_status.dart';
+part 'media_detail/fork_tv_detail.dart'; // FORK: Plex-style TV detail layout.
 
 /// Ceiling for the detail hero's backdrop box, as a fraction of the window
 /// height. Roughly the natural height of a 16:9 backdrop on a 16:10 desktop
@@ -371,6 +372,10 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   bool _hasLoadedExtras = false;
   bool _hasLoadedRelatedHubs = false;
   final _tvDetailRailKey = GlobalKey<TvBrowseRailState>();
+  // FORK: second rail (cast, extras, related) of the Plex-style TV layout, and
+  // whether it currently has the D-pad (the page is then slid up to show it).
+  final _forkTvLowerRailKey = GlobalKey<TvBrowseRailState>();
+  bool _forkTvLowerRailActive = false;
   final _hubFocusMemory = HubFocusMemory();
   PageRoute<dynamic>? _route;
   RouteObserver<PageRoute<dynamic>>? _routeObserver;
@@ -2438,6 +2443,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   /// Focus the first available section above the primary action row.
   void _focusAboveActionRow() {
     if (PlatformDetector.isTV()) {
+      // FORK: the episodes sit above the action row in the Plex-style layout.
+      if (_focusForkTvEpisodeRail()) return;
       // The hero information block sits directly above the action row and is
       // the D-pad path to the full details sheet (#2042).
       _tvDetailInfoFocusNode.requestFocus();
@@ -2451,6 +2458,11 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     final metadata = _metadata;
 
     if (PlatformDetector.isTV()) {
+      // FORK: the cast rail sits below the action row in the Plex-style layout.
+      if (StreamerFork.plexDetailLayout) {
+        _focusForkTvLowerRail();
+        return;
+      }
       if (_focusTvSeasonTabs()) return;
       _tvDetailRailKey.currentState?.requestFocus();
       return;
@@ -2655,12 +2667,20 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                         : null,
                     onNavigateDown: () {
                       if (PlatformDetector.isTV()) {
+                        // FORK: the info block sits under the tabs in the Plex-style layout.
+                        if (StreamerFork.plexDetailLayout) {
+                          _tvDetailInfoFocusNode.requestFocus();
+                          return;
+                        }
                         _tvDetailRailKey.currentState?.requestFocus();
                         return;
                       }
                       _firstEpisodeFocusNode.requestFocus();
                     },
-                    onNavigateUp: PlatformDetector.isTV() ? _focusTvDetailActionRow : null,
+                    // FORK: the tabs are the top of the page in the Plex-style layout.
+                    onNavigateUp: PlatformDetector.isTV() && !StreamerFork.plexDetailLayout
+                        ? _focusTvDetailActionRow
+                        : null,
                     onLongPress: () => _showSeasonTabContextMenu(index),
                     onBack: () {
                       if (PlatformDetector.isTV()) {
@@ -3713,7 +3733,11 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     final spotlightTop = (size.height * 0.08).clamp(56.0 * detailScale, 110.0 * detailScale).toDouble();
     final rawRailHeight = _estimateTvDetailRailHeight(size, detailHubs);
     if (!_tvDetailRevealed && _isTvDetailReadyToReveal(metadata)) {
-      _scheduleTvDetailReveal(rawRailHeight, focusPrimaryAction: metadata.isMovie);
+      // FORK: the Plex-style layout starts on Play when it has no episode rail.
+      _scheduleTvDetailReveal(
+        rawRailHeight,
+        focusPrimaryAction: metadata.isMovie || _forkTvDetailStartsOnPlay(detailHubs),
+      );
     }
     final stableRailHeight = _tvDetailStableRailHeight;
     final railHeight = stableRailHeight == null || rawRailHeight > stableRailHeight ? rawRailHeight : stableRailHeight;
@@ -3726,7 +3750,10 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         : seasonTabsBottom;
     final spotlightLeft = (24 * detailScale).clamp(18.0, 40.0).toDouble();
 
-    final revealContent = Stack(
+    // FORK: Plex-style arrangement of the same pieces (fork_tv_detail.dart).
+    final Widget revealContent = StreamerFork.plexDetailLayout
+        ? _buildForkTvDetailContent(context, metadata, hubs: detailHubs, hideSpoilers: hideSpoilers, size: size)
+        : Stack(
       fit: StackFit.expand,
       children: [
         Positioned(
@@ -3863,10 +3890,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
         if (constraints.maxHeight <= 0 || constraints.maxWidth <= 0) return const SizedBox.shrink();
 
         final availableHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 264.0;
-        // FORK: smaller title artwork on Android TV.
-        final desiredLogoHeight = 220 * scale * StreamerFork.tvLogoFactor;
+        final desiredLogoHeight = 220 * scale;
         final minLogoHeight = 60 * scale;
-        final desiredLogoWidth = 790 * scale * StreamerFork.tvLogoFactor;
+        final desiredLogoWidth = 790 * scale;
         final episodeTitleLineHeight = 30 * scale;
         final episodeTitleGap = 4 * scale;
         final metadataLineHeight = 22 * scale;

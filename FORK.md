@@ -34,7 +34,14 @@ git grep -n "FORK:" -- lib android
 - Show page: one row of season tabs and a single episode rail, instead of one
   stacked rail per season.
 - Plex orange for progress bars, the selected tab and the selected rail icon.
-- Smaller title artwork in the hero and on the detail page.
+- Titles as plain text instead of each item's logo artwork (home hero and
+  detail page).
+- Detail page laid out like Plex (`lib/screens/media_detail/fork_tv_detail.dart`):
+  season tabs at the top, title and summary, the episodes, then the action
+  buttons with the stream details as chips on the same row, and the cast rail
+  peeking at the bottom; it slides up when the D-pad reaches it.
+- Round cast portraits, an "E7" badge on episode thumbnails, wider gutters
+  between cards.
 - Own application id (`com.edde746.plezy.streamer`) and label, so it installs
   next to the official app.
 - Settings > Plezy Streamer: downloads the latest APK from this repository's

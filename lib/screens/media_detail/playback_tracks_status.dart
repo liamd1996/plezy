@@ -210,6 +210,16 @@ extension _MediaDetailPlaybackTracksStatus on _MediaDetailScreenState {
       height: 1.2,
     );
 
+    // FORK: Plex-style outlined chips instead of a text line on Android TV.
+    if (isTv && StreamerFork.plexDetailLayout) {
+      return Semantics(
+        key: const ValueKey('detail_playback_tracks'),
+        label: semanticsLabel,
+        excludeSemantics: true,
+        child: _buildForkTrackChips(context, parts, scale: tvScale, maxWidth: maxWidth),
+      );
+    }
+
     return Semantics(
       key: const ValueKey('detail_playback_tracks'),
       label: semanticsLabel,
