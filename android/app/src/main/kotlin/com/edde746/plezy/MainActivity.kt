@@ -947,6 +947,8 @@ class MainActivity : FlutterActivity() {
     externalPlayerChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
     // FORK: in-app updater (lib/fork/streamer_update.dart).
     com.edde746.plezy.fork.StreamerUpdateChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
+    // FORK: theme music on show pages (lib/fork/streamer_theme.dart).
+    com.edde746.plezy.fork.StreamerThemeChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
     userCertificateChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
 
     // Splash screen theme: persist user's chosen theme for next launch (API 31+)

@@ -104,6 +104,7 @@ import '../services/playback_track_preview.dart';
 import '../utils/error_message_utils.dart';
 import '../fork/streamer_fork.dart';
 import '../fork/streamer_meta.dart';
+import '../fork/streamer_theme.dart';
 
 part 'media_detail/action_buttons.dart';
 part 'media_detail/playback_tracks_status.dart';
@@ -856,6 +857,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   @override
   void initState() {
     super.initState();
+    // FORK: a show's theme music, once, like Plex.
+    if (StreamerThemeMusic.enabled && !widget.isOffline) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) StreamerThemeMusic.playFor(widget.metadata, _getMediaClientForMetadata(context));
+      });
+    }
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
     _lastEpisodeFocusNode.addListener(_onLastEpisodeFocusChanged);
@@ -928,6 +935,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     _route = route;
     _routeObserver = routeObserver;
     routeObserver.subscribe(this, route);
+  }
+
+  // FORK: the theme music stops when the player or another page opens.
+  @override
+  void didPushNext() {
+    StreamerThemeMusic.stop();
   }
 
   @override
@@ -1042,6 +1055,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
   @override
   void dispose() {
+    StreamerThemeMusic.stop(); // FORK
     _libraryContentSubscription?.cancel();
     for (final source in _watchlistListenedSources) {
       source.watchlistChanges.removeListener(_onWatchlistSourceChanged);
