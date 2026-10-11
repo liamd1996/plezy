@@ -22,6 +22,7 @@ import 'media_rating_badge.dart';
 import 'optimized_media_image.dart' show ClearLogoImage, blurArtwork;
 import 'rasterized_gradient.dart';
 import '../fork/streamer_fork.dart';
+import '../fork/streamer_meta.dart';
 
 class TvSpotlightBackground extends StatelessWidget {
   final MediaItem? item;
@@ -192,6 +193,49 @@ class TvSpotlightBackground extends StatelessWidget {
     final shouldHideSpoiler = hideSpoilers && media.shouldHideSpoiler;
     final summary = shouldHideSpoiler ? null : media.summary;
     final title = media.grandparentTitle ?? media.displayTitle;
+
+    // FORK: Plex-style block: title, episode name, facts, scores, summary.
+    if (StreamerFork.plexMetaLines) {
+      final episodeName = media.isEpisode ? media.title : null;
+      return Column(
+        crossAxisAlignment: .start,
+        mainAxisSize: .min,
+        children: [
+          _buildLogoOrTitle(context, media, title, width),
+          if (episodeName != null && episodeName.isNotEmpty) ...[
+            SizedBox(height: 4 * scale),
+            Text(
+              episodeName,
+              maxLines: 1,
+              overflow: .ellipsis,
+              style: TextStyle(color: colorScheme.onSurface, fontSize: 24 * scale, fontWeight: .w700, height: 1.2),
+            ),
+          ],
+          SizedBox(height: 12 * scale),
+          StreamerMetaLines(
+            item: media,
+            scale: scale,
+            color: colorScheme.onSurface,
+            trailing: metadataTrailing,
+            gap: 10 * scale,
+          ),
+          if (summary != null && summary.isNotEmpty) ...[
+            SizedBox(height: 14 * scale),
+            Text(
+              summary,
+              maxLines: 3,
+              overflow: .ellipsis,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.78),
+                fontSize: _summaryFontSize(scale),
+                height: 1.4,
+              ),
+            ),
+          ],
+          SizedBox(height: 10 * scale),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: .start,

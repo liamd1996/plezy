@@ -4,7 +4,7 @@
 // way Plex does on Android TV:
 //
 //   season tabs
-//   title (plain text) · episode title · metadata line · summary
+//   title (plain text) / episode title / facts / scores / summary
 //   episodes of the selected season
 //   action buttons ............................ stream chips (1080p, audio…)
 //   (empty space)
@@ -79,30 +79,34 @@ extension _ForkTvDetail on _MediaDetailScreenState {
     final lowerRailHeight = lowerHubs.isEmpty ? 0.0 : _estimateTvBrowseRailHeight(size, lowerHubs);
     // What stays visible of the lower rail at rest: its heading and the top
     // of the first row.
-    final lowerPeek = lowerHubs.isEmpty ? 0.0 : (lowerRailHeight < 96 * scale ? lowerRailHeight : 96 * scale);
+    final lowerPeek = lowerHubs.isEmpty ? 0.0 : (lowerRailHeight < 112 * scale ? lowerRailHeight : 112 * scale);
     final lowerActive = _forkTvLowerRailActive && lowerHubs.isNotEmpty;
     final slide = lowerActive ? lowerRailHeight - lowerPeek : 0.0;
     final upperHeight = size.height - lowerPeek;
 
     // Vertical budget of the upper block.
-    final topMargin = (showTabs ? 14 : 30) * scale;
-    final tabsHeight = showTabs ? _tvDetailSeasonTabsHeight + 8 * scale : 0.0;
-    final titleHeight = 56 * scale;
-    final episodeLineHeight = hasEpisodes && !metadata.isMovie ? 30 * scale : 0.0;
-    final metadataLineHeight = 24 * scale;
-    final summaryGap = 8 * scale;
+    final topMargin = (showTabs ? 24 : 40) * scale;
+    final tabsGap = 16 * scale;
+    final tabsHeight = showTabs ? _tvDetailSeasonTabsHeight + tabsGap : 0.0;
+    final titleHeight = 60 * scale;
+    final lineGap = 6 * scale;
+    final episodeLineHeight = hasEpisodes && !metadata.isMovie ? 32 * scale : 0.0;
+    final metadataLineHeight = 26 * scale;
+    final summaryGap = 12 * scale;
     final summaryFontSize = 18 * scale;
     final summaryLineHeight = summaryFontSize * 1.35;
-    final railGap = hasEpisodes ? 4 * scale : 0.0;
-    final actionGap = (hasEpisodes ? 8 : 20) * scale;
+    final railGap = hasEpisodes ? 14 * scale : 0.0;
+    final actionGap = (hasEpisodes ? 16 : 24) * scale;
     final actionHeight = _tvDetailActionSize * scale;
-    final minimumEmptySpace = 12 * scale;
+    final minimumEmptySpace = 36 * scale;
     final fixedHeight =
         topMargin +
         tabsHeight +
         titleHeight +
-        episodeLineHeight +
-        metadataLineHeight +
+        lineGap +
+        (episodeLineHeight > 0 ? episodeLineHeight + lineGap : 0) +
+        metadataLineHeight * 2 +
+        lineGap +
         summaryGap +
         railGap +
         upperRailHeight +
@@ -123,6 +127,7 @@ extension _ForkTvDetail on _MediaDetailScreenState {
           titleHeight: titleHeight,
           episodeLineHeight: episodeLineHeight,
           metadataLineHeight: metadataLineHeight,
+          lineGap: lineGap,
           summaryGap: summaryGap,
           summaryFontSize: summaryFontSize,
           summaryLines: summaryLines,
@@ -165,7 +170,7 @@ extension _ForkTvDetail on _MediaDetailScreenState {
             SizedBox(height: topMargin),
             if (showTabs)
               Padding(
-                padding: EdgeInsets.only(left: contentLeft, right: contentLeft, bottom: 8 * scale),
+                padding: EdgeInsets.only(left: contentLeft, right: contentLeft, bottom: tabsGap),
                 child: SizedBox(
                   height: _tvDetailSeasonTabsHeight,
                   child: Align(alignment: Alignment.centerLeft, child: _buildSeasonTabs()),
@@ -277,6 +282,7 @@ extension _ForkTvDetail on _MediaDetailScreenState {
     required double titleHeight,
     required double episodeLineHeight,
     required double metadataLineHeight,
+    required double lineGap,
     required double summaryGap,
     required double summaryFontSize,
     required int summaryLines,
@@ -308,11 +314,12 @@ extension _ForkTvDetail on _MediaDetailScreenState {
               child: _buildDetailTitle(
                 context,
                 metadata.displayTitle,
-                fontSize: 44 * scale,
+                fontSize: 46 * scale,
                 fontWeight: FontWeight.w800,
                 shadowBlur: 10,
               ),
             ),
+            SizedBox(height: lineGap),
             FocusableWrapper(
               focusNode: _tvDetailInfoFocusNode,
               onSelect: openDetails,
@@ -344,20 +351,22 @@ extension _ForkTvDetail on _MediaDetailScreenState {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: foreground,
-                              fontSize: 22 * scale,
+                              fontSize: 23 * scale,
                               fontWeight: FontWeight.w700,
                               height: 1.2,
                             ),
                           ),
                         ),
                       ),
-                    SizedBox(
-                      height: metadataLineHeight,
-                      width: double.infinity,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: _buildTvDetailMetadataLine(context, metadata, scale),
-                      ),
+                    if (episodeLineHeight > 0) SizedBox(height: lineGap),
+                    StreamerMetaLines(
+                      item: _tvDetailFocusedEpisode.value ?? metadata,
+                      ratingsFallback: metadata,
+                      scale: scale,
+                      color: foreground,
+                      lineHeight: metadataLineHeight,
+                      gap: lineGap,
+                      reserveRatingsLine: true,
                     ),
                     SizedBox(height: summaryGap),
                     if (summaryLines > 0)

@@ -40,6 +40,9 @@ git grep -n "FORK:" -- lib android
   season tabs at the top, title and summary, the episodes, then the action
   buttons with the stream details as chips on the same row, and the cast rail
   peeking at the bottom; it slides up when the D-pad reaches it.
+- Plex-style facts under titles (`lib/fork/streamer_meta.dart`): episode name,
+  then season/episode, date, duration and rating, then the scores on their own
+  line. Taller rail headings.
 - Round cast portraits, an "E7" badge on episode thumbnails, wider gutters
   between cards.
 - Own application id (`com.edde746.plezy.streamer`) and label, so it installs

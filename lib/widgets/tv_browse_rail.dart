@@ -92,9 +92,10 @@ class TvBrowseRailLayout {
   static double fullCardItemGapForScale(double scale) =>
       StreamerFork.cardGapForScale(scale) ?? (12 * scale).clamp(8, 18).toDouble();
 
-  static double hubStripHeightForScale(double scale) => 30 * scale;
+  // FORK: roomier rail headings on Android TV.
+  static double hubStripHeightForScale(double scale) => StreamerFork.railHeaderHeight * scale;
 
-  static double nextHubPeekHeightForScale(double scale) => 20 * scale;
+  static double nextHubPeekHeightForScale(double scale) => StreamerFork.railNextHeaderPeek * scale;
 
   static double hubSectionHeightFor({required double scale, required double activeRailHeight}) {
     return hubStripHeightForScale(scale) + activeRailHeight;

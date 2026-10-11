@@ -102,6 +102,17 @@ abstract final class StreamerFork {
   /// Gutter between image-only cards in rails and grids; null off Android TV.
   static double? cardGapForScale(double scale) => isAndroidTv ? (20 * scale).clamp(14, 30).toDouble() : null;
 
+  /// Height of a rail's heading strip and how much of the next rail's heading
+  /// peeks under the active one, before the rail's scale. Taller than
+  /// upstream on Android TV so headings are not glued to the cards.
+  static double get railHeaderHeight => isAndroidTv ? 50 : 30;
+  static double get railNextHeaderPeek => isAndroidTv ? 40 : 20;
+
+  /// Plex-style facts under titles: episode name, then "S2 · E3  date
+  /// duration  rating", then the scores on their own line
+  /// (lib/fork/streamer_meta.dart).
+  static bool get plexMetaLines => isAndroidTv;
+
   // --------------------------------------------------------------------------
   // Cards
   // --------------------------------------------------------------------------
