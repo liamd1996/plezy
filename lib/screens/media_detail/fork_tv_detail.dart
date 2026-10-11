@@ -10,7 +10,8 @@
 //   (empty space)
 //   cast, extras and related rails, peeking at the bottom of the screen
 //
-// The page is two blocks in a Stack. D-pad DOWN from the action row hands
+// The D-pad goes tabs, episodes, action row, lower rail; the text block is
+// not focusable. The page is two blocks in a Stack. D-pad DOWN from the action row hands
 // focus to the lower rail and slides both blocks up so that rail is fully
 // visible; UP from it slides them back.
 
@@ -23,13 +24,17 @@ extension _ForkTvDetail on _MediaDetailScreenState {
   bool _forkTvDetailStartsOnPlay(List<MediaHub> hubs) =>
       StreamerFork.plexDetailLayout && !hubs.any(_isForkTvUpperHub);
 
-  /// UP from the action row. False when the layout is off or has no episodes,
-  /// so the caller falls back to the info block.
+  /// UP from the action row: the episodes, when there are any. False only when
+  /// the layout is off, so the caller then keeps its upstream target.
   bool _focusForkTvEpisodeRail() {
     if (!StreamerFork.plexDetailLayout) return false;
     final rail = _tvDetailRailKey.currentState;
-    if (rail == null) return false;
-    rail.requestFocus();
+    if (rail != null) {
+      // Cleared first so the rail's focused episode is not discarded as a
+      // notification arriving while the action row still has the D-pad.
+      _tvDetailActionRowHasFocus = false;
+      rail.requestFocus();
+    }
     return true;
   }
 
@@ -44,11 +49,6 @@ extension _ForkTvDetail on _MediaDetailScreenState {
   /// UP from the first row of the lower rail.
   void _leaveForkTvLowerRail() {
     if (_forkTvLowerRailActive) setStateIfMounted(() => _forkTvLowerRailActive = false);
-    _focusTvDetailActionRow();
-  }
-
-  void _focusForkTvBelowInfo() {
-    if (_focusForkTvEpisodeRail()) return;
     _focusTvDetailActionRow();
   }
 
@@ -191,7 +191,7 @@ extension _ForkTvDetail on _MediaDetailScreenState {
                 trailingForHub: _tvDetailTrailingState,
                 leadingItemForHub: _tvDetailLeadingItemForHub,
                 onRetryHub: _retryTvDetailHub,
-                onNavigateUp: _tvDetailInfoFocusNode.requestFocus,
+                onNavigateUp: _focusTvSeasonTabs,
                 onNavigateDown: _focusTvDetailActionRow,
                 onBack: _popMediaDetailIfBackNotSuppressed,
                 tallPosterScale: _tvDetailTallPosterScale,
@@ -271,9 +271,12 @@ extension _ForkTvDetail on _MediaDetailScreenState {
     );
   }
 
-  /// Text title, the focused episode's title, the metadata line and the
-  /// summary. Every line keeps a fixed height so the rows underneath do not
-  /// move while the D-pad walks the episodes.
+  /// Text title, the episode's title, the facts, the series' scores and the
+  /// summary. Not focusable. Every line keeps a fixed height so the rows
+  /// underneath do not move while the D-pad walks the episodes.
+  ///
+  /// The episode shown is the focused one, or, while the action row has the
+  /// D-pad, the one its Play button starts.
   Widget _buildForkTvDetailInfo(
     BuildContext context,
     MediaItem metadata, {
@@ -289,108 +292,79 @@ extension _ForkTvDetail on _MediaDetailScreenState {
   }) {
     final theme = Theme.of(context);
     final foreground = _tvDetailForegroundColor(context);
-    final description = _tvDetailDescription(metadata, hideSpoilers: hideSpoilers);
-    final episodeTitle = _tvDetailFocusedEpisode.value?.title;
-    final genres = metadata.genres ?? const <String>[];
+    final episode =
+        _tvDetailFocusedEpisode.value ?? (_tvDetailActionRowHasFocus && metadata.isShow ? _showPlayEpisode() : null);
+    String? description;
+    if (episode != null) {
+      description = _tvDetailItemDescription(episode, hideSpoilers: hideSpoilers);
+      if (description == null) {
+        final season = _tvDetailSeasonForEpisode(episode, metadata);
+        if (season != null) description = _tvDetailItemDescription(season, hideSpoilers: hideSpoilers);
+      }
+    }
+    description ??= _tvDetailItemDescription(metadata, hideSpoilers: hideSpoilers);
 
-    void openDetails() => _openTvDetailsSheet(context, metadata, hideSpoilers: hideSpoilers);
-
-    return Semantics(
-      key: const ValueKey('tv_detail_information_semantics'),
-      identifier: 'tv_detail_information',
-      container: true,
-      button: true,
-      label: _tvDetailInformationSemanticLabel(metadata, description: description, genres: genres),
-      hint: t.mediaMenu.viewDetails,
-      onTap: openDetails,
-      child: ExcludeSemantics(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: titleHeight,
-              width: double.infinity,
-              child: _buildDetailTitle(
-                context,
-                metadata.displayTitle,
-                fontSize: 46 * scale,
-                fontWeight: FontWeight.w800,
-                shadowBlur: 10,
-              ),
-            ),
-            SizedBox(height: lineGap),
-            FocusableWrapper(
-              focusNode: _tvDetailInfoFocusNode,
-              onSelect: openDetails,
-              onNavigateUp: _focusTvSeasonTabs,
-              onNavigateDown: _focusForkTvBelowInfo,
-              onBack: _popMediaDetailIfBackNotSuppressed,
-              useBackgroundFocus: true,
-              disableScale: true,
-              autoScroll: false,
-              borderRadius: 8,
-              descendantsAreFocusable: false,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: openDetails,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (episodeLineHeight > 0)
-                      SizedBox(
-                        height: episodeLineHeight,
-                        width: double.infinity,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            episodeTitle ?? '',
-                            key: const ValueKey('tv_detail_episode_title'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: foreground,
-                              fontSize: 23 * scale,
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (episodeLineHeight > 0) SizedBox(height: lineGap),
-                    StreamerMetaLines(
-                      item: _tvDetailFocusedEpisode.value ?? metadata,
-                      ratingsFallback: metadata,
-                      scale: scale,
-                      color: foreground,
-                      lineHeight: metadataLineHeight,
-                      gap: lineGap,
-                      reserveRatingsLine: true,
-                    ),
-                    SizedBox(height: summaryGap),
-                    if (summaryLines > 0)
-                      SizedBox(
-                        height: summaryFontSize * 1.35 * summaryLines,
-                        width: double.infinity,
-                        child: Text(
-                          description ?? '',
-                          maxLines: summaryLines,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: foreground.withValues(alpha: 0.78),
-                            fontSize: summaryFontSize,
-                            height: 1.35,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: titleHeight,
+          width: double.infinity,
+          child: _buildDetailTitle(
+            context,
+            metadata.displayTitle,
+            fontSize: 46 * scale,
+            fontWeight: FontWeight.w800,
+            shadowBlur: 10,
+          ),
         ),
-      ),
+        SizedBox(height: lineGap),
+        if (episodeLineHeight > 0) ...[
+          SizedBox(
+            height: episodeLineHeight,
+            width: double.infinity,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                episode?.title ?? '',
+                key: const ValueKey('tv_detail_episode_title'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: foreground, fontSize: 23 * scale, fontWeight: FontWeight.w700, height: 1.2),
+              ),
+            ),
+          ),
+          SizedBox(height: lineGap),
+        ],
+        StreamerMetaLines(
+          item: episode ?? metadata,
+          // The scores are always the series' (or the movie's), never an
+          // episode's own.
+          ratingsItem: metadata,
+          scale: scale,
+          color: foreground,
+          lineHeight: metadataLineHeight,
+          gap: lineGap,
+          reserveRatingsLine: true,
+        ),
+        SizedBox(height: summaryGap),
+        if (summaryLines > 0)
+          SizedBox(
+            height: summaryFontSize * 1.35 * summaryLines,
+            width: double.infinity,
+            child: Text(
+              description ?? '',
+              maxLines: summaryLines,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: foreground.withValues(alpha: 0.78),
+                fontSize: summaryFontSize,
+                height: 1.35,
+              ),
+            ),
+          ),
+      ],
     );
   }
 

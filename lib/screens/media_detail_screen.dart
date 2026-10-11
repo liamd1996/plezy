@@ -2668,11 +2668,6 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                         : null,
                     onNavigateDown: () {
                       if (PlatformDetector.isTV()) {
-                        // FORK: the info block sits under the tabs in the Plex-style layout.
-                        if (StreamerFork.plexDetailLayout) {
-                          _tvDetailInfoFocusNode.requestFocus();
-                          return;
-                        }
                         _tvDetailRailKey.currentState?.requestFocus();
                         return;
                       }

@@ -4,10 +4,14 @@
 //   S2 · E3    15 sept. 2024    42min    TV-MA
 //   (ratings)
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../media/catalog_item_ref.dart';
 import '../media/media_item.dart';
 import '../media/media_item_types.dart';
+import '../media/media_server_client.dart';
 import '../utils/content_utils.dart';
 import '../utils/formatters.dart';
 import '../widgets/fitted_metadata_line.dart';
@@ -19,7 +23,7 @@ class StreamerMetaLines extends StatelessWidget {
     required this.item,
     required this.scale,
     required this.color,
-    this.ratingsFallback,
+    this.ratingsItem,
     this.trailing,
     this.lineHeight,
     this.gap = 0,
@@ -29,8 +33,9 @@ class StreamerMetaLines extends StatelessWidget {
   /// The item the facts describe (the focused episode, or the show or movie).
   final MediaItem item;
 
-  /// Where the ratings come from when [item] carries none (the show of an episode).
-  final MediaItem? ratingsFallback;
+  /// Whose scores are shown instead of [item]'s own: the series of an
+  /// episode. Null shows [item]'s.
+  final MediaItem? ratingsItem;
   final double scale;
   final Color color;
 
@@ -64,10 +69,10 @@ class StreamerMetaLines extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = TextStyle(color: color, fontSize: 18 * scale, fontWeight: FontWeight.w700, letterSpacing: 0.1);
     final facts = _facts();
-    final ratings = mediaRatingsFor(item, fallbackItem: ratingsFallback);
+    final ratings = mediaRatingsFor(ratingsItem ?? item);
     final extra = trailing;
     // Scores read as a footnote to the facts line.
-    final ratingStyle = style.copyWith(fontSize: 15 * scale, fontWeight: FontWeight.w600);
+    final ratingStyle = style.copyWith(fontSize: 13.5 * scale, fontWeight: FontWeight.w600);
 
     Widget line(Widget child) {
       final aligned = Align(alignment: Alignment.centerLeft, child: child);
@@ -110,6 +115,113 @@ class StreamerMetaLines extends StatelessWidget {
         ] else if (reserveRatingsLine && lineHeight != null)
           SizedBox(height: gap + lineHeight!),
       ],
+    );
+  }
+}
+
+/// [StreamerMetaLines] for the home hero. Rails only carry a title's headline
+/// scores, so this fetches the full item once the hero has rested on it for a
+/// moment and then shows every score (Rotten Tomatoes included). An episode or
+/// a season shows its series' scores.
+class StreamerHeroMetaLines extends StatefulWidget {
+  const StreamerHeroMetaLines({
+    super.key,
+    required this.item,
+    required this.client,
+    required this.scale,
+    required this.color,
+    this.trailing,
+    this.lineHeight,
+    this.gap = 0,
+  });
+
+  final MediaItem item;
+  final MediaServerClient? client;
+  final double scale;
+  final Color color;
+  final Widget? trailing;
+  final double? lineHeight;
+  final double gap;
+
+  @override
+  State<StreamerHeroMetaLines> createState() => _StreamerHeroMetaLinesState();
+}
+
+class _StreamerHeroMetaLinesState extends State<StreamerHeroMetaLines> {
+  static const _cacheLimit = 80;
+  static final Map<String, MediaItem> _cache = <String, MediaItem>{};
+
+  Timer? _timer;
+  MediaItem? _ratingsItem;
+
+  /// Id of the item whose scores are shown: the series for an episode or a
+  /// season, the item itself otherwise. Null when it cannot be fetched.
+  String? get _ratingsId {
+    final item = widget.item;
+    if (item.catalogItem != null) return null;
+    if (item.isEpisode) return item.grandparentId;
+    if (item.isSeason) return item.parentId;
+    return item.id;
+  }
+
+  String? get _cacheKey {
+    final id = _ratingsId;
+    return id == null ? null : '${widget.item.serverId}|$id';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(StreamerHeroMetaLines oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.globalKey != widget.item.globalKey) _resolve();
+  }
+
+  void _resolve() {
+    _timer?.cancel();
+    final key = _cacheKey;
+    final id = _ratingsId;
+    _ratingsItem = key == null ? null : _cache[key];
+    final client = widget.client;
+    if (_ratingsItem != null || key == null || id == null || client == null) return;
+    _timer = Timer(const Duration(milliseconds: 450), () async {
+      try {
+        final full = await client.fetchItem(id);
+        if (full == null) return;
+        if (_cache.length >= _cacheLimit) _cache.remove(_cache.keys.first);
+        _cache[key] = full;
+        if (mounted && _cacheKey == key) setState(() => _ratingsItem = full);
+      } catch (_) {
+        // Scores are a nicety: keep whatever the rail already carried.
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    // Until the series is fetched an episode shows no scores, so its own
+    // never flash in first.
+    final own = item.isEpisode || item.isSeason ? item.copyWith(ratings: const [], rating: null) : item;
+    return StreamerMetaLines(
+      item: item,
+      ratingsItem: _ratingsItem ?? own,
+      scale: widget.scale,
+      color: widget.color,
+      trailing: widget.trailing,
+      lineHeight: widget.lineHeight,
+      gap: widget.gap,
+      reserveRatingsLine: true,
     );
   }
 }

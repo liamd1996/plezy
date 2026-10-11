@@ -195,45 +195,53 @@ class TvSpotlightBackground extends StatelessWidget {
     final title = media.grandparentTitle ?? media.displayTitle;
 
     // FORK: Plex-style block: title, episode name, facts, scores, summary.
+    // Fixed height and top-aligned, so the title stays where it is whatever
+    // the length of the summary (up to four lines).
     if (StreamerFork.plexMetaLines) {
       final episodeName = media.isEpisode ? media.title : null;
-      return Column(
-        crossAxisAlignment: .start,
-        mainAxisSize: .min,
-        children: [
-          _buildLogoOrTitle(context, media, title, width),
-          if (episodeName != null && episodeName.isNotEmpty) ...[
-            SizedBox(height: 4 * scale),
-            Text(
-              episodeName,
-              maxLines: 1,
-              overflow: .ellipsis,
-              style: TextStyle(color: colorScheme.onSurface, fontSize: 24 * scale, fontWeight: .w700, height: 1.2),
-            ),
-          ],
-          SizedBox(height: 12 * scale),
-          StreamerMetaLines(
-            item: media,
-            scale: scale,
-            color: colorScheme.onSurface,
-            trailing: metadataTrailing,
-            gap: 10 * scale,
-          ),
-          if (summary != null && summary.isNotEmpty) ...[
-            SizedBox(height: 14 * scale),
-            Text(
-              summary,
-              maxLines: 3,
-              overflow: .ellipsis,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.78),
-                fontSize: _summaryFontSize(scale),
-                height: 1.4,
+      final summaryLineHeight = _summaryFontSize(scale) * 1.4;
+      return SizedBox(
+        height: 174 * scale + summaryLineHeight * 4,
+        child: Column(
+          crossAxisAlignment: .start,
+          children: [
+            _buildLogoOrTitle(context, media, title, width),
+            if (episodeName != null && episodeName.isNotEmpty) ...[
+              SizedBox(height: 4 * scale),
+              SizedBox(
+                height: 30 * scale,
+                child: Text(
+                  episodeName,
+                  maxLines: 1,
+                  overflow: .ellipsis,
+                  style: TextStyle(color: colorScheme.onSurface, fontSize: 24 * scale, fontWeight: .w700, height: 1.2),
+                ),
               ),
+            ],
+            SizedBox(height: 10 * scale),
+            StreamerHeroMetaLines(
+              item: media,
+              client: client,
+              scale: scale,
+              color: colorScheme.onSurface,
+              trailing: metadataTrailing,
+              lineHeight: 24 * scale,
+              gap: 4 * scale,
             ),
+            SizedBox(height: 10 * scale),
+            if (summary != null && summary.isNotEmpty)
+              Text(
+                summary,
+                maxLines: 4,
+                overflow: .ellipsis,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.78),
+                  fontSize: _summaryFontSize(scale),
+                  height: 1.4,
+                ),
+              ),
           ],
-          SizedBox(height: 4 * scale),
-        ],
+        ),
       );
     }
 
