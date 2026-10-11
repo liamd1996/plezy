@@ -1472,7 +1472,9 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
     final colorScheme = Theme.of(context).colorScheme;
     final titleColor = isActive ? colorScheme.onSurface : colorScheme.onSurface.withValues(alpha: 0.54);
     final iconColor = isActive ? colorScheme.onSurface : colorScheme.onSurface.withValues(alpha: 0.42);
-    final showServerName = widget.showServerName && hub.serverName != null;
+    // FORK: the main server is not named after rail headings on Android TV.
+    final showServerName =
+        widget.showServerName && hub.serverName != null && !StreamerFork.hidesRailServerName(context, hub.serverId);
     final serverColor = colorScheme.primary.withValues(alpha: isActive ? 0.7 : 0.4);
     final serverStyle = Theme.of(
       context,

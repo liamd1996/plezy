@@ -1074,7 +1074,7 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
                                               showServerName:
                                                   row.showServerName ||
                                                   (row.library.serverName != null &&
-                                                      row.library.serverId != visibleLibraries.first.serverId),
+                                                      !StreamerFork.isMainServer(context, row.library.serverId)),
                                               collapsible: true,
                                               isCollapsed: isCollapsed,
                                             ),

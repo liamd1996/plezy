@@ -35,7 +35,10 @@ internal object StreamerUpdateChannel {
             val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", file)
             val intent = Intent(Intent.ACTION_VIEW)
               .setDataAndType(uri, APK_MIME_TYPE)
-              .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+              // No NEW_TASK: the installer opens on top of this activity. With
+              // NEW_TASK Android may only bring a leftover installer task from
+              // the previous update to the front and show nothing.
+              .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             activity.startActivity(intent)
             result.success(null)
           } catch (e: ActivityNotFoundException) {

@@ -10,8 +10,12 @@ import 'package:flutter/material.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
+import 'package:provider/provider.dart';
+
 import '../media/media_item.dart';
 import '../media/media_item_types.dart';
+import '../providers/hidden_libraries_provider.dart';
+import '../providers/libraries_provider.dart';
 import '../utils/platform_detector.dart';
 import '../widgets/app_icon.dart';
 
@@ -42,6 +46,27 @@ abstract final class StreamerFork {
   /// Plex-style side rail: Search, Home, one row per library (icons while
   /// collapsed), Settings at the bottom; no "Libraries" header or server groups.
   static bool get plexSidebar => isAndroidTv;
+
+  /// Whether [serverId] is the main server: the one of the first library shown
+  /// in the side rail. The fork names a server (under a library, after a rail
+  /// heading) only when it is another one.
+  static bool isMainServer(BuildContext context, String? serverId) {
+    if (serverId == null) return true;
+    try {
+      final hidden = Provider.of<HiddenLibrariesProvider>(context, listen: false).hiddenLibraryKeys;
+      for (final library in Provider.of<LibrariesProvider>(context, listen: false).libraries) {
+        if (library.serverId == null || hidden.contains(library.globalKey)) continue;
+        return library.serverId == serverId;
+      }
+    } catch (_) {
+      // No providers above this context: treat every server as the main one.
+    }
+    return true;
+  }
+
+  /// Rail headings drop the "· server" suffix for the main server.
+  static bool hidesRailServerName(BuildContext context, String? serverId) =>
+      isAndroidTv && isMainServer(context, serverId);
 
   /// `defaultValueProvider` for TV appearance settings the fork turns on out
   /// of the box (image-only cards, artwork in the corner). The user can still

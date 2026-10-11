@@ -26,14 +26,17 @@ import 'streamer_fork.dart';
 class StreamerRelease {
   final int build;
   final Uri apkUrl;
-  const StreamerRelease({required this.build, required this.apkUrl});
+
+  /// Size of the APK in bytes as published, or 0 when GitHub did not say.
+  final int size;
+  const StreamerRelease({required this.build, required this.apkUrl, this.size = 0});
 }
 
 class StreamerUpdateService {
   StreamerUpdateService._();
 
   static const _channel = MethodChannel('com.plezy.fork/update');
-  static const _apkFileName = 'plezy-streamer-update.apk';
+  static const _apkPrefix = 'plezy-streamer-';
   static const _tagPrefix = 'streamer-';
 
   /// The updater installs APKs, so it only exists on Android.
@@ -44,18 +47,30 @@ class StreamerUpdateService {
   static String get _assetName =>
       Abi.current() == Abi.androidArm64 ? 'plezy-android-arm64-v8a.apk' : 'plezy-android-armeabi-v7a.apk';
 
-  static Future<File> _apkFile() async {
+  /// One file name per build, so each update reaches the installer under its
+  /// own address.
+  static Future<File> _apkFile(int build) async {
     final dir = await getTemporaryDirectory();
-    return File('${dir.path}/$_apkFileName');
+    return File('${dir.path}/$_apkPrefix$build.apk');
   }
 
-  /// Deletes a previously downloaded APK. Called at launch, which is the first
+  /// Removes every downloaded APK except [keep].
+  static Future<void> _deleteApks({String? keep}) async {
+    final dir = await getTemporaryDirectory();
+    if (!await dir.exists()) return;
+    await for (final entry in dir.list(followLinks: false)) {
+      if (entry is! File || entry.path == keep) continue;
+      final name = entry.uri.pathSegments.last;
+      if (name.startsWith(_apkPrefix) && name.endsWith('.apk')) await entry.delete();
+    }
+  }
+
+  /// Deletes previously downloaded APKs. Called at launch, which is the first
   /// moment after an install where the file is certainly no longer needed.
   static Future<void> deleteDownloadedApk() async {
     if (!isAvailable) return;
     try {
-      final file = await _apkFile();
-      if (await file.exists()) await file.delete();
+      await _deleteApks();
     } catch (e, st) {
       appLogger.w('Streamer update: could not delete the downloaded APK', error: e, stackTrace: st);
     }
@@ -79,7 +94,10 @@ class StreamerUpdateService {
       for (final asset in assets) {
         if (asset is Map && asset['name'] == _assetName) {
           final url = asset['browser_download_url'];
-          if (url is String) return StreamerRelease(build: build, apkUrl: Uri.parse(url));
+          final size = asset['size'];
+          if (url is String) {
+            return StreamerRelease(build: build, apkUrl: Uri.parse(url), size: size is int ? size : 0);
+          }
         }
       }
     }
@@ -89,8 +107,18 @@ class StreamerUpdateService {
   /// Streams the APK to the cache directory, reporting 0..1 through
   /// [onProgress] when the server announces a length.
   static Future<File> download(StreamerRelease release, {void Function(double progress)? onProgress}) async {
-    final file = await _apkFile();
-    if (await file.exists()) await file.delete();
+    final file = await _apkFile(release.build);
+    // Never more than one APK on disk.
+    await _deleteApks(keep: file.path);
+    if (await file.exists()) {
+      // Already downloaded in full (a second press after a dismissed
+      // installer): reuse it instead of fetching it again.
+      if (release.size > 0 && await file.length() == release.size) {
+        onProgress?.call(1);
+        return file;
+      }
+      await file.delete();
+    }
     final client = http.Client();
     IOSink? sink;
     try {
@@ -116,6 +144,9 @@ class StreamerUpdateService {
       await sink.flush();
       await sink.close();
       sink = null;
+      if (release.size > 0 && received != release.size) {
+        throw HttpException('Téléchargement incomplet ($received sur ${release.size} octets)', uri: release.apkUrl);
+      }
       return file;
     } catch (_) {
       await sink?.close();
@@ -200,7 +231,7 @@ class _StreamerUpdateSectionState extends State<StreamerUpdateSection> {
       if (!mounted) return;
       setState(() {
         _phase = _UpdatePhase.idle;
-        _note = 'version ${release.build} prête à installer';
+        _note = "version ${release.build} téléchargée, appuie de nouveau si l'installation ne s'est pas ouverte";
       });
     } catch (e, st) {
       appLogger.w('Streamer update failed', error: e, stackTrace: st);
