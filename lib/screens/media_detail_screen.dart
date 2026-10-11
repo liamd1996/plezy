@@ -5038,9 +5038,15 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
         // Use the same format for both play and resume
         // (icon will indicate the difference)
+        // FORK: "S2 · E3" like the rest of the Android TV interface.
+        final forkLabel = StreamerFork.playEpisodeLabel(seasonNum, episodeNum);
+        if (forkLabel != null) return forkLabel;
         return t.discover.playEpisode(season: seasonNum.toString(), episode: episodeNum.toString());
       } else {
         final seasonNum = defaultPlaybackSeason(_seasons)?.index ?? 1;
+        // FORK: same label format as above.
+        final forkLabel = StreamerFork.playEpisodeLabel(seasonNum, 1);
+        if (forkLabel != null) return forkLabel;
         return t.discover.playEpisode(season: seasonNum.toString(), episode: '1');
       }
     }

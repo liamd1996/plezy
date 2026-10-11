@@ -1485,8 +1485,11 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
           alignment: .centerLeft,
           child: Row(
             children: [
-              AppIcon(widget.iconForHub(hub, hubIndex), fill: 1, size: 20 * scale, color: iconColor),
-              SizedBox(width: 8 * scale),
+              // FORK: no icon in front of rail headings on Android TV.
+              if (StreamerFork.railHeaderIcons) ...[
+                AppIcon(widget.iconForHub(hub, hubIndex), fill: 1, size: 20 * scale, color: iconColor),
+                SizedBox(width: 8 * scale),
+              ],
               Expanded(
                 child: Row(
                   children: [
@@ -1497,7 +1500,7 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
                         overflow: .ellipsis,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: titleColor,
-                          fontSize: 18 * scale,
+                          fontSize: StreamerFork.railHeaderFontSize * scale,
                           height: 1,
                           fontWeight: isActive ? FontWeight.w800 : FontWeight.w700,
                         ),

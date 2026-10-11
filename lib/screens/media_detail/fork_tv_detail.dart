@@ -79,7 +79,7 @@ extension _ForkTvDetail on _MediaDetailScreenState {
     final lowerRailHeight = lowerHubs.isEmpty ? 0.0 : _estimateTvBrowseRailHeight(size, lowerHubs);
     // What stays visible of the lower rail at rest: its heading and the top
     // of the first row.
-    final lowerPeek = lowerHubs.isEmpty ? 0.0 : (lowerRailHeight < 112 * scale ? lowerRailHeight : 112 * scale);
+    final lowerPeek = lowerHubs.isEmpty ? 0.0 : (lowerRailHeight < 116 * scale ? lowerRailHeight : 116 * scale);
     final lowerActive = _forkTvLowerRailActive && lowerHubs.isNotEmpty;
     final slide = lowerActive ? lowerRailHeight - lowerPeek : 0.0;
     final upperHeight = size.height - lowerPeek;

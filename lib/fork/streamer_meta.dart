@@ -66,6 +66,8 @@ class StreamerMetaLines extends StatelessWidget {
     final facts = _facts();
     final ratings = mediaRatingsFor(item, fallbackItem: ratingsFallback);
     final extra = trailing;
+    // Scores read as a footnote to the facts line.
+    final ratingStyle = style.copyWith(fontSize: 15 * scale, fontWeight: FontWeight.w600);
 
     Widget line(Widget child) {
       final aligned = Align(alignment: Alignment.centerLeft, child: child);
@@ -98,9 +100,9 @@ class StreamerMetaLines extends StatelessWidget {
           SizedBox(height: gap),
           line(
             FittedMetadataLine(
-              textStyle: style,
+              textStyle: ratingStyle,
               parts: [MetadataLineRatings(ratings, dropPriority: 0)],
-              ratingIconSize: style.fontSize,
+              ratingIconSize: ratingStyle.fontSize,
               ratingSpacing: 4 * scale,
               ratingEntrySpacing: 16 * scale,
             ),

@@ -105,8 +105,17 @@ abstract final class StreamerFork {
   /// Height of a rail's heading strip and how much of the next rail's heading
   /// peeks under the active one, before the rail's scale. Taller than
   /// upstream on Android TV so headings are not glued to the cards.
-  static double get railHeaderHeight => isAndroidTv ? 50 : 30;
-  static double get railNextHeaderPeek => isAndroidTv ? 40 : 20;
+  static double get railHeaderHeight => isAndroidTv ? 54 : 30;
+
+  /// On Android TV the peek also shows the top of the next rail's cards.
+  static double get railNextHeaderPeek => isAndroidTv ? 100 : 20;
+
+  /// Rail headings: larger text and no leading icon on Android TV.
+  static double get railHeaderFontSize => isAndroidTv ? 22 : 18;
+  static bool get railHeaderIcons => !isAndroidTv;
+
+  /// "S2 · E3" on the detail page's Play button; null keeps upstream's label.
+  static String? playEpisodeLabel(int season, int episode) => isAndroidTv ? 'S$season · E$episode' : null;
 
   /// Plex-style facts under titles: episode name, then "S2 · E3  date
   /// duration  rating", then the scores on their own line

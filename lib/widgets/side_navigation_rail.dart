@@ -1069,7 +1069,12 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
                                               row.section,
                                               row.library,
                                               t,
-                                              showServerName: row.showServerName,
+                                              // The server is named under libraries that are
+                                              // not on the first (main) server.
+                                              showServerName:
+                                                  row.showServerName ||
+                                                  (row.library.serverName != null &&
+                                                      row.library.serverId != visibleLibraries.first.serverId),
                                               collapsible: true,
                                               isCollapsed: isCollapsed,
                                             ),
@@ -1599,7 +1604,10 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
           if (showServerName)
             Text(
               library.serverName!,
-              style: TextStyle(fontSize: 9, color: t.textMuted.withValues(alpha: 0.4)),
+              // FORK: legible server name in the Plex-style rail.
+              style: StreamerFork.plexSidebar
+                  ? TextStyle(fontSize: 10.5, height: 1.15, color: t.textMuted.withValues(alpha: 0.75))
+                  : TextStyle(fontSize: 9, color: t.textMuted.withValues(alpha: 0.4)),
               overflow: .ellipsis,
             ),
         ],

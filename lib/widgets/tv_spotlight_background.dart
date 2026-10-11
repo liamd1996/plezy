@@ -232,7 +232,7 @@ class TvSpotlightBackground extends StatelessWidget {
               ),
             ),
           ],
-          SizedBox(height: 10 * scale),
+          SizedBox(height: 4 * scale),
         ],
       );
     }
