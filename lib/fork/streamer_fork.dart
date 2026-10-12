@@ -5,6 +5,7 @@
 // rebase onto a new Plezy release. See FORK.md at the repository root.
 
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -73,6 +74,10 @@ abstract final class StreamerFork {
   /// change them in Settings > Appearance.
   static bool tvDefaultOn() => isAndroidTv;
 
+  /// Library grids keep the title and year under posters, even with the
+  /// image-only cards used everywhere else.
+  static bool get captionedLibraryGrids => isAndroidTv;
+
   // --------------------------------------------------------------------------
   // Interface size
   // --------------------------------------------------------------------------
@@ -111,7 +116,30 @@ abstract final class StreamerFork {
                 viewInsets: outer.viewInsets * inverse,
                 systemGestureInsets: outer.systemGestureInsets * inverse,
               ),
-              child: child,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  child,
+                  // Faint light from the top, as on Plex's pages.
+                  IgnorePointer(
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _videoScreens,
+                      builder: (context, videoScreens, _) => videoScreens > 0
+                          ? const SizedBox.shrink()
+                          : const DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: [0.0, 0.6],
+                                  colors: [Color(0x10FFFFFF), Color(0x00FFFFFF)],
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -204,6 +232,16 @@ abstract final class StreamerFork {
   // --------------------------------------------------------------------------
   // Colours
   // --------------------------------------------------------------------------
+
+  /// Page background and raised surfaces of the dark themes: charcoal rather
+  /// than black, under a faint top-down sheen ([scaleInterface]).
+  static const Color tvBackground = Color(0xFF131418);
+  static const Color tvSurface = Color(0xFF1D1E23);
+
+  /// Number of open video player screens; the sheen is not drawn over video.
+  static final ValueNotifier<int> _videoScreens = ValueNotifier<int>(0);
+  static void videoScreenOpened() => _videoScreens.value++;
+  static void videoScreenClosed() => _videoScreens.value = math.max(0, _videoScreens.value - 1);
 
   /// Plex's orange, used for progress bars and the selected tab or rail item.
   static const Color accent = Color(0xFFE5A00D);

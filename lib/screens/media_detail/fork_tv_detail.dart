@@ -81,7 +81,6 @@ extension _ForkTvDetail on _MediaDetailScreenState {
     // of the first row.
     final lowerPeek = lowerHubs.isEmpty ? 0.0 : (lowerRailHeight < 116 * scale ? lowerRailHeight : 116 * scale);
     final lowerActive = _forkTvLowerRailActive && lowerHubs.isNotEmpty;
-    final slide = lowerActive ? lowerRailHeight - lowerPeek : 0.0;
     final upperHeight = size.height - lowerPeek;
 
     // Vertical budget of the upper block.
@@ -113,7 +112,16 @@ extension _ForkTvDetail on _MediaDetailScreenState {
         actionGap +
         actionHeight +
         minimumEmptySpace;
-    final summaryLines = ((upperHeight - fixedHeight) / summaryLineHeight).floor().clamp(0, hasEpisodes ? 3 : 5);
+    final summaryLines = ((upperHeight - fixedHeight) / summaryLineHeight).floor().clamp(0, hasEpisodes ? 3 : 4);
+
+    // Where the lower rail rests. With episodes it peeks at the bottom of
+    // the screen, below an empty band; without (a movie) it follows the
+    // action row directly, like Plex. When it takes the D-pad, the page
+    // slides up just enough to show it whole.
+    final contentHeight = fixedHeight - minimumEmptySpace + summaryLines * summaryLineHeight;
+    final peekTop = size.height - lowerPeek;
+    final restTop = hasEpisodes ? peekTop : math.min(contentHeight + 12 * scale, peekTop);
+    final slide = lowerActive ? math.max(0.0, restTop + lowerRailHeight - size.height) : 0.0;
 
     final infoBlock = Padding(
       padding: EdgeInsets.only(left: contentLeft, right: size.width * 0.40),
@@ -247,7 +255,7 @@ extension _ForkTvDetail on _MediaDetailScreenState {
             curve: Curves.easeOutCubic,
             left: 0,
             right: 0,
-            top: size.height - lowerPeek - slide,
+            top: restTop - slide,
             child: TvBrowseRail(
               key: _forkTvLowerRailKey,
               hubs: lowerHubs,

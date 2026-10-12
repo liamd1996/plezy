@@ -18,6 +18,7 @@ import '../../../widgets/skeleton_media_card.dart';
 import '../../../widgets/sliver_child_memo.dart';
 import '../../main_screen.dart';
 import 'base_library_tab.dart';
+import '../../../fork/streamer_fork.dart';
 
 /// Library tabs whose whole body is one paginated grid of media cards.
 ///
@@ -132,7 +133,8 @@ abstract class PaginatedCardGridTabState<T extends Object, W extends BaseLibrary
 
   Widget _buildItemsSliver(ViewMode viewMode, int density, {required bool fullCardLayout}) {
     final shape = usesSquareCards ? CardShape.square : null;
-    final useFullCardLayout = fullCardLayout && shape != CardShape.square;
+    // FORK: library grids keep the title and year under each poster.
+    final useFullCardLayout = fullCardLayout && shape != CardShape.square && !StreamerFork.captionedLibraryGrids;
     return MediaCardSliverLayout(
       viewMode: viewMode,
       itemCount: totalSize,

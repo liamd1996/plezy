@@ -67,6 +67,7 @@ import '../../../utils/platform_detector.dart';
 import '../../../i18n/strings.g.dart';
 import '../../main_screen.dart';
 import 'base_library_tab.dart';
+import '../../../fork/streamer_fork.dart';
 
 /// Browse tab for library screen
 /// Shows library items with grouping, filtering, and sorting
@@ -2099,7 +2100,8 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaItem, LibraryBrows
     // Full-bleed TV cards intentionally hide captions. Music artwork alone
     // is not a reliable identity, so artist/album/track grids always keep the
     // standard captioned card while preserving their circular/square artwork.
-    final useFullCardLayout = fullCardLayout && !isMusicGrouping;
+    // FORK: library grids keep the title and year under each poster.
+    final useFullCardLayout = fullCardLayout && !isMusicGrouping && !StreamerFork.captionedLibraryGrids;
 
     if (viewMode == ViewMode.list) {
       _setListScrollMetrics(density: libraryDensity, usesWideAspectRatio: useWideRatio, shape: browseShape);

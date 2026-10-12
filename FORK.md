@@ -45,6 +45,9 @@ git grep -n "FORK:" -- lib android
   line. Taller rail headings.
 - A show's theme music plays once on its detail page (`lib/fork/streamer_theme.dart`,
   native player in `android/.../fork/StreamerThemeChannel.kt`).
+- Charcoal background with a faint top sheen (not over video); library grids
+  keep title and year under posters; on a movie page the cast follows the
+  action row.
 - Round cast portraits, an "E7" badge on episode thumbnails, wider gutters
   between cards.
 - Own application id (`com.edde746.plezy.streamer`) and label, so it installs

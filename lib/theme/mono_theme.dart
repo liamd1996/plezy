@@ -1,13 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../fork/streamer_fork.dart';
 import 'gapped_track_shape.dart';
 import 'mono_tokens.dart';
 
-final Map<({bool dark, bool oled, TargetPlatform platform}), ThemeData> _monoThemeCache = {};
+// FORK: `fork` in the key, so a theme built before TV detection is not reused.
+final Map<({bool dark, bool oled, bool fork, TargetPlatform platform}), ThemeData> _monoThemeCache = {};
 
 ThemeData monoTheme({required bool dark, bool oled = false}) {
   // ThemeData derives several defaults from defaultTargetPlatform.
-  final key = (dark: dark || oled, oled: oled, platform: defaultTargetPlatform);
+  final key = (dark: dark || oled, oled: oled, fork: StreamerFork.isAndroidTv, platform: defaultTargetPlatform);
   final cached = _monoThemeCache[key];
   if (cached != null) return cached;
 
@@ -19,7 +21,16 @@ ThemeData monoTheme({required bool dark, bool oled = false}) {
 ThemeData _buildMonoTheme({required bool dark, required bool oled, required TargetPlatform platform}) {
   // neutral greys tuned for crisp contrast
   final ({Color bg, Color surface, Color outline, Color text, Color textMuted}) c;
-  if (oled) {
+  // FORK: Plex-like charcoal for both dark themes on Android TV.
+  if ((dark || oled) && StreamerFork.isAndroidTv) {
+    c = (
+      bg: StreamerFork.tvBackground,
+      surface: StreamerFork.tvSurface,
+      outline: const Color(0x1FFFFFFF),
+      text: const Color(0xFFEDEDED),
+      textMuted: const Color(0x99EDEDED),
+    );
+  } else if (oled) {
     c = (
       bg: const Color(0xFF000000), // Pure black for OLED
       surface: const Color(0xFF0A0A0A), // Very dark gray
