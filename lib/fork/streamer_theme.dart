@@ -15,8 +15,9 @@ import 'streamer_fork.dart';
 abstract final class StreamerThemeMusic {
   static const _channel = MethodChannel('com.plezy.fork/theme');
 
-  /// Playback level, well under the video volume.
-  static const double _volume = 0.25;
+  /// Playback gain (linear). Theme songs are mastered far louder than TV
+  /// dialogue, so this sits around -20 dB to land under the shows' own level.
+  static const double _volume = 0.1;
 
   static bool get enabled => StreamerFork.isAndroidTv;
 

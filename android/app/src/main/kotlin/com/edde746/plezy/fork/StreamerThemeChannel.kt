@@ -82,7 +82,13 @@ internal object StreamerThemeChannel {
       created.setDataSource(activity.applicationContext, Uri.parse(url), headers)
       created.isLooping = false
       created.setVolume(volume, volume)
-      created.setOnPreparedListener { prepared -> if (player === prepared) prepared.start() }
+      created.setOnPreparedListener { prepared ->
+        if (player === prepared) {
+          // Re-applied once prepared: some players reset a volume set earlier.
+          prepared.setVolume(level, level)
+          prepared.start()
+        }
+      }
       created.setOnCompletionListener { finished -> release(finished) }
       // No theme on the server (404) or an unreachable server lands here.
       created.setOnErrorListener { failed, _, _ ->
