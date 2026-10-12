@@ -41,7 +41,8 @@ import '../profiles/profile.dart';
 import '../watch_together/services/watch_together_relay_endpoint.dart';
 import '../fork/streamer_fork.dart';
 
-enum ThemeMode { system, light, dark, oled }
+// FORK: `grey`, a charcoal dark theme (lib/theme/mono_theme.dart).
+enum ThemeMode { system, light, dark, oled, grey }
 
 /// Library density is now an int 1–5 (1 = most compact, 5 = most comfortable).
 /// Default is 3.

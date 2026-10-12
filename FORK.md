@@ -45,7 +45,8 @@ git grep -n "FORK:" -- lib android
   line. Taller rail headings.
 - A show's theme music plays once on its detail page (`lib/fork/streamer_theme.dart`,
   native player in `android/.../fork/StreamerThemeChannel.kt`).
-- Charcoal background with a faint top sheen (not over video); library grids
+- "Gris" theme (Settings > Appearance): charcoal background with a faint top
+  sheen (not over video). Library grids
   keep title and year under posters; on a movie page the cast follows the
   action row.
 - Round cast portraits, an "E7" badge on episode thumbnails, wider gutters

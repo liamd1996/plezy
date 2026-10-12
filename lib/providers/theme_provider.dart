@@ -7,6 +7,7 @@ import '../mixins/disposable_change_notifier_mixin.dart';
 import '../services/settings_binding_owner.dart';
 import '../services/settings_service.dart' as settings;
 import '../theme/mono_theme.dart';
+import '../fork/streamer_fork.dart';
 
 class ThemeProvider extends ChangeNotifier with DisposableChangeNotifierMixin, WidgetsBindingObserver {
   late final SettingsBindingOwner _settingsBinding;
@@ -20,6 +21,7 @@ class ThemeProvider extends ChangeNotifier with DisposableChangeNotifierMixin, W
     // async path below lands a microtask too late for the first build.
     final loaded = settings.SettingsService.instanceOrNull;
     if (loaded != null) _themeMode = loaded.read(settings.SettingsService.themeMode);
+    StreamerFork.greyTheme.value = _themeMode == settings.ThemeMode.grey; // FORK
     _settingsBinding = SettingsBindingOwner(
       prefs: const [settings.SettingsService.themeMode],
       onRefresh: (service) => _syncThemeMode(service.read(settings.SettingsService.themeMode)),
@@ -44,6 +46,7 @@ class ThemeProvider extends ChangeNotifier with DisposableChangeNotifierMixin, W
   }
 
   void _syncThemeMode(settings.ThemeMode mode, {bool forceNotify = false}) {
+    StreamerFork.greyTheme.value = mode == settings.ThemeMode.grey; // FORK: top sheen.
     final changed = _themeMode != mode;
     _themeMode = mode;
     _updateSplashTheme(mode);
@@ -58,13 +61,14 @@ class ThemeProvider extends ChangeNotifier with DisposableChangeNotifierMixin, W
   /// provider will settle on, instead of guessing from platform brightness
   /// and flashing when the two disagree (#1833).
   static ThemeData darkThemeFor(settings.ThemeMode mode) =>
-      monoTheme(dark: true, oled: mode == settings.ThemeMode.oled);
+      monoTheme(dark: true, oled: mode == settings.ThemeMode.oled, grey: mode == settings.ThemeMode.grey);
 
   /// Material equivalent of the app's own [settings.ThemeMode].
   static ThemeMode materialThemeModeFor(settings.ThemeMode mode) => switch (mode) {
     settings.ThemeMode.light => ThemeMode.light,
     settings.ThemeMode.dark => ThemeMode.dark,
     settings.ThemeMode.oled => ThemeMode.dark,
+    settings.ThemeMode.grey => ThemeMode.dark,
     settings.ThemeMode.system => ThemeMode.system,
   };
 
@@ -80,6 +84,7 @@ class ThemeProvider extends ChangeNotifier with DisposableChangeNotifierMixin, W
       case settings.ThemeMode.dark:
         return true;
       case settings.ThemeMode.oled:
+      case settings.ThemeMode.grey:
         return true;
       case settings.ThemeMode.system:
         return _systemBrightness == Brightness.dark;
@@ -107,6 +112,7 @@ class ThemeProvider extends ChangeNotifier with DisposableChangeNotifierMixin, W
     final name = switch (mode) {
       settings.ThemeMode.dark => 'dark',
       settings.ThemeMode.oled => 'oled',
+      settings.ThemeMode.grey => 'dark',
       settings.ThemeMode.light => 'light',
       settings.ThemeMode.system => 'system',
     };
@@ -121,6 +127,8 @@ class ThemeProvider extends ChangeNotifier with DisposableChangeNotifierMixin, W
         return Symbols.dark_mode_rounded;
       case settings.ThemeMode.oled:
         return Symbols.contrast_rounded;
+      case settings.ThemeMode.grey:
+        return Symbols.dark_mode_rounded;
       case settings.ThemeMode.system:
         return Symbols.brightness_auto_rounded;
     }

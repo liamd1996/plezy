@@ -4,25 +4,25 @@ import '../fork/streamer_fork.dart';
 import 'gapped_track_shape.dart';
 import 'mono_tokens.dart';
 
-// FORK: `fork` in the key, so a theme built before TV detection is not reused.
-final Map<({bool dark, bool oled, bool fork, TargetPlatform platform}), ThemeData> _monoThemeCache = {};
+// FORK: `grey` theme variant.
+final Map<({bool dark, bool oled, bool grey, TargetPlatform platform}), ThemeData> _monoThemeCache = {};
 
-ThemeData monoTheme({required bool dark, bool oled = false}) {
+ThemeData monoTheme({required bool dark, bool oled = false, bool grey = false}) {
   // ThemeData derives several defaults from defaultTargetPlatform.
-  final key = (dark: dark || oled, oled: oled, fork: StreamerFork.isAndroidTv, platform: defaultTargetPlatform);
+  final key = (dark: dark || oled || grey, oled: oled, grey: grey, platform: defaultTargetPlatform);
   final cached = _monoThemeCache[key];
   if (cached != null) return cached;
 
-  final theme = _buildMonoTheme(dark: key.dark, oled: key.oled, platform: key.platform);
+  final theme = _buildMonoTheme(dark: key.dark, oled: key.oled, grey: key.grey, platform: key.platform);
   _monoThemeCache[key] = theme;
   return theme;
 }
 
-ThemeData _buildMonoTheme({required bool dark, required bool oled, required TargetPlatform platform}) {
+ThemeData _buildMonoTheme({required bool dark, required bool oled, bool grey = false, required TargetPlatform platform}) {
   // neutral greys tuned for crisp contrast
   final ({Color bg, Color surface, Color outline, Color text, Color textMuted}) c;
-  // FORK: Plex-like charcoal for both dark themes on Android TV.
-  if ((dark || oled) && StreamerFork.isAndroidTv) {
+  // FORK: the "Gris" theme, Plex-like charcoal.
+  if (grey) {
     c = (
       bg: StreamerFork.tvBackground,
       surface: StreamerFork.tvSurface,
@@ -56,7 +56,7 @@ ThemeData _buildMonoTheme({required bool dark, required bool oled, required Targ
     );
   }
 
-  final isDark = dark || oled;
+  final isDark = dark || oled || grey;
   final clickableCursor = WidgetStateProperty.resolveWith<MouseCursor>(
     (states) => states.contains(WidgetState.disabled) ? MouseCursor.defer : SystemMouseCursors.click,
   );

@@ -122,9 +122,9 @@ abstract final class StreamerFork {
                   child,
                   // Faint light from the top, as on Plex's pages.
                   IgnorePointer(
-                    child: ValueListenableBuilder<int>(
-                      valueListenable: _videoScreens,
-                      builder: (context, videoScreens, _) => videoScreens > 0
+                    child: ListenableBuilder(
+                      listenable: Listenable.merge([_videoScreens, greyTheme]),
+                      builder: (context, _) => _videoScreens.value > 0 || !greyTheme.value
                           ? const SizedBox.shrink()
                           : const DecoratedBox(
                               decoration: BoxDecoration(
@@ -233,10 +233,13 @@ abstract final class StreamerFork {
   // Colours
   // --------------------------------------------------------------------------
 
-  /// Page background and raised surfaces of the dark themes: charcoal rather
-  /// than black, under a faint top-down sheen ([scaleInterface]).
+  /// Page background and raised surfaces of the "Gris" theme: charcoal
+  /// rather than black, under a faint top-down sheen ([scaleInterface]).
   static const Color tvBackground = Color(0xFF131418);
   static const Color tvSurface = Color(0xFF1D1E23);
+
+  /// Whether the "Gris" theme is in use (set by ThemeProvider).
+  static final ValueNotifier<bool> greyTheme = ValueNotifier<bool>(false);
 
   /// Number of open video player screens; the sheen is not drawn over video.
   static final ValueNotifier<int> _videoScreens = ValueNotifier<int>(0);

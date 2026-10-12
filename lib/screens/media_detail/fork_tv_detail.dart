@@ -112,7 +112,7 @@ extension _ForkTvDetail on _MediaDetailScreenState {
         actionGap +
         actionHeight +
         minimumEmptySpace;
-    final summaryLines = ((upperHeight - fixedHeight) / summaryLineHeight).floor().clamp(0, hasEpisodes ? 3 : 4);
+    final summaryLines = ((upperHeight - fixedHeight) / summaryLineHeight).floor().clamp(0, hasEpisodes ? 3 : 8);
 
     // Where the lower rail rests. With episodes it peeks at the bottom of
     // the screen, below an empty band; without (a movie) it follows the
