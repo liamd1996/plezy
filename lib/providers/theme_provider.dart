@@ -112,7 +112,8 @@ class ThemeProvider extends ChangeNotifier with DisposableChangeNotifierMixin, W
     final name = switch (mode) {
       settings.ThemeMode.dark => 'dark',
       settings.ThemeMode.oled => 'oled',
-      settings.ThemeMode.grey => 'dark',
+      // FORK: black window behind the Gris theme, so video letterboxing stays black.
+      settings.ThemeMode.grey => 'oled',
       settings.ThemeMode.light => 'light',
       settings.ThemeMode.system => 'system',
     };

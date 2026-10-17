@@ -4,6 +4,7 @@
 // `// FORK:` comment, so `git grep -n "FORK:"` lists every touch point after a
 // rebase onto a new Plezy release. See FORK.md at the repository root.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -124,7 +125,7 @@ abstract final class StreamerFork {
                   IgnorePointer(
                     child: ListenableBuilder(
                       listenable: Listenable.merge([_videoScreens, greyTheme]),
-                      builder: (context, _) => _videoScreens.value > 0 || !greyTheme.value
+                      builder: (context, _) => _videoScreens.value > 0 || _openVideoScreens > 0 || !greyTheme.value
                           ? const SizedBox.shrink()
                           : const DecoratedBox(
                               decoration: BoxDecoration(
@@ -243,8 +244,18 @@ abstract final class StreamerFork {
 
   /// Number of open video player screens; the sheen is not drawn over video.
   static final ValueNotifier<int> _videoScreens = ValueNotifier<int>(0);
-  static void videoScreenOpened() => _videoScreens.value++;
-  static void videoScreenClosed() => _videoScreens.value = math.max(0, _videoScreens.value - 1);
+  // Hidden at once on open; the change itself is applied after the current
+  // build or unmount pass, where a rebuild request is not allowed.
+  static int _openVideoScreens = 0;
+  static void videoScreenOpened() {
+    _openVideoScreens++;
+    scheduleMicrotask(() => _videoScreens.value = _openVideoScreens);
+  }
+
+  static void videoScreenClosed() {
+    _openVideoScreens = math.max(0, _openVideoScreens - 1);
+    scheduleMicrotask(() => _videoScreens.value = _openVideoScreens);
+  }
 
   /// Plex's orange, used for progress bars and the selected tab or rail item.
   static const Color accent = Color(0xFFE5A00D);
