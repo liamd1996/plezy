@@ -70,6 +70,11 @@ abstract final class StreamerFork {
   static bool hidesRailServerName(BuildContext context, String? serverId) =>
       isAndroidTv && isMainServer(context, serverId);
 
+  /// Play after a pause this long reopens the stream at the paused position
+  /// instead of resuming it (lib/screens/video_player/parts/fork_long_pause.dart).
+  static bool get reloadAfterLongPause => isAndroidTv;
+  static const Duration longPause = Duration(minutes: 10);
+
   /// `defaultValueProvider` for TV appearance settings the fork turns on out
   /// of the box (image-only cards, artwork in the corner). The user can still
   /// change them in Settings > Appearance.

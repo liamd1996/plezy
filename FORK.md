@@ -49,6 +49,8 @@ git grep -n "FORK:" -- lib android
   sheen (not over video). Library grids
   keep title and year under posters; on a movie page the cast follows the
   action row.
+- Play after a pause of 10 minutes or more reopens the stream at the same
+  position (`lib/screens/video_player/parts/fork_long_pause.dart`).
 - Round cast portraits, an "E7" badge on episode thumbnails, wider gutters
   between cards.
 - Own application id (`com.edde746.plezy.streamer`) and label, so it installs

@@ -149,6 +149,7 @@ part 'video_player/parts/playback_start.dart';
 part 'video_player/parts/seeking.dart';
 part 'video_player/parts/build.dart';
 part 'video_player/parts/watch_together.dart';
+part 'video_player/parts/fork_long_pause.dart'; // FORK
 
 final WakelockController _wakelockController = WakelockController();
 
@@ -1166,6 +1167,8 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
       // video back" — rebuild the stream instead (#1520).
       return _eofRecovery.retry(reason: 'play pressed');
     }
+    // FORK: a stream paused for hours is reopened rather than resumed.
+    if (_forkPausedTooLong(currentPlayer)) return _forkResumeAfterLongPause(currentPlayer);
     return currentPlayer.play();
   }
 
@@ -1187,6 +1190,8 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
       _playbackIntentShouldPlay = true;
       return _eofRecovery.retry(reason: 'play/pause pressed');
     }
+    // FORK: a stream paused for hours is reopened rather than resumed.
+    if (_forkPausedTooLong(currentPlayer)) return _forkResumeAfterLongPause(currentPlayer);
     _playbackIntentShouldPlay = !currentPlayer.state.playing;
     return currentPlayer.playOrPause();
   }
